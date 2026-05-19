@@ -429,6 +429,7 @@ async function init() {
   if (savedUser) {
     try {
       currentUser = JSON.parse(savedUser);
+      isAdmin = currentUser.is_admin || false;
       await loginSuccess();
       return;
     } catch(e) {
