@@ -163,6 +163,22 @@ tbody tr:hover td{background:var(--bg3)}
 .guide-body p{font-size:13px;color:var(--text2);line-height:1.6}
 
 select{font-size:16px}
+/* COLLAPSIBLE SECTIONS */
+.coll-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 0;user-select:none;-webkit-user-select:none}
+.coll-header:hover .coll-title{color:var(--royal)}
+.coll-title{font-size:13px;font-weight:700;color:var(--text)}
+.coll-arrow{font-size:12px;color:var(--text3);transition:transform .2s}
+.coll-arrow.open{transform:rotate(90deg)}
+.coll-body{display:none;padding-top:10px}
+.coll-body.open{display:block}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.inv-pair{display:flex;flex-direction:column;gap:4px;background:var(--bg3);border-radius:var(--radius);padding:10px}
+.inv-pair-label{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:2px}
+.inv-pair-inputs{display:flex;gap:6px}
+.inv-pair-inputs input{flex:1;min-width:0;font-size:13px;padding:6px 8px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);-webkit-appearance:none;appearance:none}
+.inv-pair-inputs input:focus{outline:none;border-color:var(--royal)}
+.inv-pair-inputs .lv-input{width:52px;flex:0 0 52px}
+.inv-sub{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin:14px 0 8px;font-family:var(--mono)}
 
 @media(max-width:700px){
   .grid2{grid-template-columns:1fr}
@@ -218,7 +234,8 @@ select{font-size:16px}
       <button class="tab" onclick="showTab('messaggio')">📨 Messaggio</button>
       <button class="tab" onclick="showTab('staffette')">🏃 Staffette</button>
       <button class="tab" onclick="showTab('ranking')">📊 Ranking</button>
-      <button class="tab" onclick="showTab('inserisci')">✏️ I miei dati</button>
+      <button class="tab" onclick="showTab('inserisci')">✏️ Dati CC</button>
+      <button class="tab" onclick="showTab('inventario')">🎒 Inventario</button>
       <button class="tab" onclick="showTab('trofei')">🏆 Trofei</button>
       <button class="tab" onclick="showTab('guida')">❓ Guida</button>
     </div>
@@ -283,6 +300,11 @@ select{font-size:16px}
     <!-- TAB INSERISCI -->
     <div id="tab-inserisci" style="display:none">
       <div id="insert-content"></div>
+    </div>
+
+    <!-- TAB INVENTARIO -->
+    <div id="tab-inventario" style="display:none">
+      <div id="inventario-content"><div class="loading"><span class="spinner"></span>Caricamento...</div></div>
     </div>
 
     <!-- TAB TROFEI -->
@@ -361,11 +383,11 @@ const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','11
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
 const GRP={'100m':'SR','200m':'SR','400m':'SR','800m':'MR','1500m':'MR','5000m':'LR','10000m':'LR','Marathon':'LR','110H':'H','400H':'H','3000S':'H','LJ':'J','TJ':'J','HJ':'J','PV':'J','SP':'T','DT':'T','HT':'T','JT':'T'};
 let lang='it';
-const I18N={it:{tab_giorno:'📅 Giorno CC',tab_msg:'📨 Messaggio',tab_staff:'🏃 Staffette',tab_rank:'📊 Ranking',tab_insert:'✏️ I miei dati',tab_trofei:'🏆 Trofei',tab_guide:'❓ Guida',day1:'Lunedì',day2:'Martedì',day3:'Mercoledì',day4:'Giovedì',obl_day:'Obbligatorie del giorno',calc_btn:'Calcola e genera messaggio →',msg_empty:'Vai al tab "Giorno CC" e premi Calcola.',trofei_title:'Trofei & Trend settimanale',trofei_player:'Giocatore',trofei_pts:'Trofei',trofei_trend:'Trend',trofei_100:'Ultimo 100m',trofei_400:'Ultimo 400m',trofei_insert:'Inserisci dati trofei (solo admin)',trofei_save:'Salva trofei',trofei_no_data:'Nessun dato disponibile.',logout:'Esci',loading:'Caricamento...',error_conn:'Errore di connessione. Riprova.',error_pwd:'Password errata o giocatore non trovato.',error_sel:'Seleziona il tuo nome e inserisci la password.',saved:'✓ Salvato!',error_save:'Errore nel salvataggio: ',no_week:'Nessuna settimana attiva trovata.',admin_for:'Stai inserendo dati per:',obl_title:'Obbligatorie della settimana',obl_desc:'Inserisci le discipline obbligatorie assegnate ogni giorno.',gear_title:'Atleta 🔥, Allenatore 💧 e Centro 🏟 per gruppo',gear_desc:'Inserisci i valori che vedi nel gioco. Aggiorna solo quando fai un upgrade.',athlete:'Atleta 🔥',coach:'Allenatore 💧',center:'Centro 🏟',valcc_title:'Valore CC per disciplina',valcc_desc:'Il valore che vedi nel gioco per ogni disciplina (già include tutto tranne l\'allenatore). Si aggiorna ogni venerdì.',valcc_info:'💡 Ranking CC = Valore CC disciplina + Allenatore del gruppo',save_gear:'Salva allenatore',save_att:'Salva attrezzatura',mode_equil:'Equilibrate',mode_top:'Top-heavy',mode_bal:'Bilanciato ottimale',mode_desc_equil:'Equilibrate: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, poi Equilibrate B/C · D=13-16',mode_desc_bal:'Bilanciato ottimale: minimizza scarto Σscore tra le 3 griglie',relay:'Griglia',relay_note1:'punta a punti',relay_note4:'paracadute',relay_free:'libera',select_day:'Seleziona giorno',player:'Giocatore',level:'Livello',rank_by_disc:'Ranking per disciplina',score_cc:'Score CC',free1:'1ª libera',free2:'2ª libera',admin_mode:'Modalità admin — inserisci per',obl_label1:'Obbligatoria 1',obl_label2:'Obbligatoria 2',grp_sprint:'Sprint',grp_mid:'Media dist.',grp_long:'Lunga dist.',grp_hurdles:'Ostacoli',grp_jumps:'Salti',grp_throws:'Lanci',center_disc:'CENTRO 🏟 PER DISCIPLINA',not_pub:'Il messaggio per {DAY} non è ancora stato pubblicato dall\'admin. Controlla più tardi!',copy_msg:'📋 Copia messaggio completo',change_pwd:'🔐 Cambia password',pwd_desc:'Inserisci la password attuale e quella nuova.',pwd_old:'Password attuale',pwd_new:'Nuova password',pwd_confirm:'Conferma nuova',pwd_btn:'Cambia password',fifth_sixth:'Quinta e Sesta: scelta libera per i rimanenti.'},en:{tab_giorno:'📅 CC Day',tab_msg:'📨 Message',tab_staff:'🏃 Relays',tab_rank:'📊 Ranking',tab_insert:'✏️ My data',tab_trofei:'🏆 Trophies',tab_guide:'❓ Guide',day1:'Monday',day2:'Tuesday',day3:'Wednesday',day4:'Thursday',obl_day:'Mandatory events of the day',calc_btn:'Calculate & generate message →',msg_empty:'Go to "CC Day" tab and press Calculate.',trofei_title:'Trophies & Weekly trend',trofei_player:'Player',trofei_pts:'Trophies',trofei_trend:'Trend',trofei_100:'Last 100m',trofei_400:'Last 400m',trofei_insert:'Insert trophies data (admin only)',trofei_save:'Save trophies',trofei_no_data:'No data available.',logout:'Logout',loading:'Loading...',error_conn:'Connection error. Please retry.',error_pwd:'Wrong password or player not found.',error_sel:'Select your name and enter the password.',saved:'✓ Saved!',error_save:'Save error: ',no_week:'No active week found.',admin_for:'Inserting data for:',obl_title:'Weekly mandatory events',obl_desc:'Enter the mandatory events assigned each day.',gear_title:'Athlete 🔥, Coach 💧 & Training Centre 🏟 by group',gear_desc:'Enter values from the game. Update only when you upgrade.',athlete:'Athlete 🔥',coach:'Coach 💧',center:'Centre 🏟',valcc_title:'CC Value by event',valcc_desc:'The value shown in the game (already includes jersey+shorts+shoes+athlete+centre). Updated every Friday.',valcc_info:'💡 CC Ranking = CC Value (event) + Coach (group)',save_gear:'Save coach',save_att:'Save equipment',mode_equil:'Balanced',mode_top:'Top-heavy',mode_bal:'Optimal balanced',mode_desc_equil:'Balanced: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, then Balanced B/C · D=13-16',mode_desc_bal:'Optimal balanced: minimizes score gap between the 3 relays',relay:'Relay',relay_note1:'scoring',relay_note4:'safety',relay_free:'free',select_day:'Select day',player:'Player',level:'Level',rank_by_disc:'Ranking by event',score_cc:'CC Score',free1:'1st free',free2:'2nd free',admin_mode:'Admin mode — insert for',obl_label1:'Mandatory 1',obl_label2:'Mandatory 2',grp_sprint:'Sprint',grp_mid:'Mid dist.',grp_long:'Long dist.',grp_hurdles:'Hurdles',grp_jumps:'Jumps',grp_throws:'Throws',center_disc:'TRAINING CENTRE 🏟 BY EVENT',not_pub:'The message for {DAY} has not been published by the admin yet. Check later!',copy_msg:'📋 Copy full message',change_pwd:'🔐 Change password',pwd_desc:'Enter your current password and the new one.',pwd_old:'Current password',pwd_new:'New password',pwd_confirm:'Confirm new',pwd_btn:'Change password',fifth_sixth:'5th & 6th: free choice for the rest.'}};
+const I18N={it:{tab_giorno:'📅 Giorno CC',tab_msg:'📨 Messaggio',tab_staff:'🏃 Staffette',tab_rank:'📊 Ranking',tab_insert:'✏️ Dati CC',tab_inventario:'🎒 Inventario',tab_trofei:'🏆 Trofei',tab_guide:'❓ Guida',day1:'Lunedì',day2:'Martedì',day3:'Mercoledì',day4:'Giovedì',obl_day:'Obbligatorie del giorno',calc_btn:'Calcola e genera messaggio →',msg_empty:'Vai al tab "Giorno CC" e premi Calcola.',trofei_title:'Trofei & Trend settimanale',trofei_player:'Giocatore',trofei_pts:'Trofei',trofei_trend:'Trend',trofei_100:'Ultimo 100m',trofei_400:'Ultimo 400m',trofei_insert:'Inserisci dati trofei (solo admin)',trofei_save:'Salva trofei',trofei_no_data:'Nessun dato disponibile.',logout:'Esci',loading:'Caricamento...',error_conn:'Errore di connessione. Riprova.',error_pwd:'Password errata o giocatore non trovato.',error_sel:'Seleziona il tuo nome e inserisci la password.',saved:'✓ Salvato!',error_save:'Errore nel salvataggio: ',no_week:'Nessuna settimana attiva trovata.',admin_for:'Stai inserendo dati per:',obl_title:'Obbligatorie della settimana',obl_desc:'Inserisci le discipline obbligatorie assegnate ogni giorno.',gear_title:'Atleta 🔥, Allenatore 💧 e Centro 🏟 per gruppo',gear_desc:'Inserisci i valori che vedi nel gioco. Aggiorna solo quando fai un upgrade.',athlete:'Atleta 🔥',coach:'Allenatore 💧',center:'Centro 🏟',valcc_title:'Valore CC per disciplina',valcc_desc:'Il valore che vedi nel gioco per ogni disciplina (già include tutto tranne l\'allenatore). Si aggiorna ogni venerdì.',valcc_info:'💡 Ranking CC = Valore CC disciplina + Allenatore del gruppo',save_gear:'Salva allenatore',save_att:'Salva attrezzatura',mode_equil:'Equilibrate',mode_top:'Top-heavy',mode_bal:'Bilanciato ottimale',mode_desc_equil:'Equilibrate: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, poi Equilibrate B/C · D=13-16',mode_desc_bal:'Bilanciato ottimale: minimizza scarto Σscore tra le 3 griglie',relay:'Griglia',relay_note1:'punta a punti',relay_note4:'paracadute',relay_free:'libera',select_day:'Seleziona giorno',player:'Giocatore',level:'Livello',rank_by_disc:'Ranking per disciplina',score_cc:'Score CC',free1:'1ª libera',free2:'2ª libera',admin_mode:'Modalità admin — inserisci per',obl_label1:'Obbligatoria 1',obl_label2:'Obbligatoria 2',grp_sprint:'Sprint',grp_mid:'Media dist.',grp_long:'Lunga dist.',grp_hurdles:'Ostacoli',grp_jumps:'Salti',grp_throws:'Lanci',center_disc:'CENTRO 🏟 PER DISCIPLINA',not_pub:'Il messaggio per {DAY} non è ancora stato pubblicato dall\'admin. Controlla più tardi!',copy_msg:'📋 Copia messaggio completo',change_pwd:'🔐 Cambia password',pwd_desc:'Inserisci la password attuale e quella nuova.',pwd_old:'Password attuale',pwd_new:'Nuova password',pwd_confirm:'Conferma nuova',pwd_btn:'Cambia password',fifth_sixth:'Quinta e Sesta: scelta libera per i rimanenti.'},en:{tab_giorno:'📅 CC Day',tab_msg:'📨 Message',tab_staff:'🏃 Relays',tab_rank:'📊 Ranking',tab_insert:'✏️ CC Data',tab_inventario:'🎒 Inventory',tab_trofei:'🏆 Trophies',tab_guide:'❓ Guide',day1:'Monday',day2:'Tuesday',day3:'Wednesday',day4:'Thursday',obl_day:'Mandatory events of the day',calc_btn:'Calculate & generate message →',msg_empty:'Go to "CC Day" tab and press Calculate.',trofei_title:'Trophies & Weekly trend',trofei_player:'Player',trofei_pts:'Trophies',trofei_trend:'Trend',trofei_100:'Last 100m',trofei_400:'Last 400m',trofei_insert:'Insert trophies data (admin only)',trofei_save:'Save trophies',trofei_no_data:'No data available.',logout:'Logout',loading:'Loading...',error_conn:'Connection error. Please retry.',error_pwd:'Wrong password or player not found.',error_sel:'Select your name and enter the password.',saved:'✓ Saved!',error_save:'Save error: ',no_week:'No active week found.',admin_for:'Inserting data for:',obl_title:'Weekly mandatory events',obl_desc:'Enter the mandatory events assigned each day.',gear_title:'Athlete 🔥, Coach 💧 & Training Centre 🏟 by group',gear_desc:'Enter values from the game. Update only when you upgrade.',athlete:'Athlete 🔥',coach:'Coach 💧',center:'Centre 🏟',valcc_title:'CC Value by event',valcc_desc:'The value shown in the game (already includes jersey+shorts+shoes+athlete+centre). Updated every Friday.',valcc_info:'💡 CC Ranking = CC Value (event) + Coach (group)',save_gear:'Save coach',save_att:'Save equipment',mode_equil:'Balanced',mode_top:'Top-heavy',mode_bal:'Optimal balanced',mode_desc_equil:'Balanced: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, then Balanced B/C · D=13-16',mode_desc_bal:'Optimal balanced: minimizes score gap between the 3 relays',relay:'Relay',relay_note1:'scoring',relay_note4:'safety',relay_free:'free',select_day:'Select day',player:'Player',level:'Level',rank_by_disc:'Ranking by event',score_cc:'CC Score',free1:'1st free',free2:'2nd free',admin_mode:'Admin mode — insert for',obl_label1:'Mandatory 1',obl_label2:'Mandatory 2',grp_sprint:'Sprint',grp_mid:'Mid dist.',grp_long:'Long dist.',grp_hurdles:'Hurdles',grp_jumps:'Jumps',grp_throws:'Throws',center_disc:'TRAINING CENTRE 🏟 BY EVENT',not_pub:'The message for {DAY} has not been published by the admin yet. Check later!',copy_msg:'📋 Copy full message',change_pwd:'🔐 Change password',pwd_desc:'Enter your current password and the new one.',pwd_old:'Current password',pwd_new:'New password',pwd_confirm:'Confirm new',pwd_btn:'Change password',fifth_sixth:'5th & 6th: free choice for the rest.'}};
 function t(k){return(I18N[lang]||I18N.it)[k]||I18N.it[k]||k;}
 function toggleLang(){lang=lang==='it'?'en':'it';const btn=document.getElementById('lang-toggle');if(btn)btn.textContent=lang==='it'?'🌐 EN':'🌐 IT';refreshAllUI();}
 function refreshAllUI(){
-  document.querySelectorAll('.tab').forEach((el,i)=>{const keys=['giorno','msg','staff','rank','insert','trofei','guide'];el.textContent=t('tab_'+keys[i]);});
+  document.querySelectorAll('.tab').forEach((el,i)=>{const keys=['giorno','msg','staff','rank','insert','inventario','trofei','guide'];el.textContent=t('tab_'+keys[i]);});
   // Bottoni giorno
   document.querySelectorAll('.day-btn').forEach((el,i)=>el.textContent=t('day'+(i+1)));
   // Titoli statici nella UI
@@ -429,7 +451,6 @@ async function init() {
   if (savedUser) {
     try {
       currentUser = JSON.parse(savedUser);
-      isAdmin = currentUser.is_admin || false;
       await loginSuccess();
       return;
     } catch(e) {
@@ -494,6 +515,7 @@ async function loginSuccess() {
 
   await loadWeekData();
   await loadAllData();
+  await loadInventoryData();
   renderOblSummary();
   renderInsertTab();
   populateDiscSelect();
@@ -502,7 +524,7 @@ async function loginSuccess() {
 function logout() {
   currentUser=null; isAdmin=false; adminActingAs=null;
   localStorage.removeItem('italy_logged_user');
-  weekData=null; rankings={}; oblData={};
+  weekData=null; rankings={}; oblData={}; inventoryData={};
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app-header').style.display='none';
   document.getElementById('app-screen').style.display='none';
@@ -599,17 +621,18 @@ function rPill(p,d){const r=getRank(p,d);return `<span class="rp ${rClass(r)}">$
 
 // ── TABS ─────────────────────────────────────────────────────
 function showTab(t){
-  ['giorno','messaggio','staffette','ranking','inserisci','trofei','guida'].forEach(n=>{
+  ['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','guida'].forEach(n=>{
     document.getElementById('tab-'+n).style.display='none';
   });
   document.getElementById('tab-'+t).style.display='block';
   document.querySelectorAll('.tab').forEach((el,i)=>{
-    el.classList.toggle('active',['giorno','messaggio','staffette','ranking','inserisci','trofei','guida'][i]===t);
+    el.classList.toggle('active',['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','guida'][i]===t);
   });
   if(t==='staffette') renderStaffette();
   if(t==='ranking') renderRankingTable();
   if(t==='trofei') renderTrofei();
   if(t==='messaggio') renderMessaggioTab();
+  if(t==='inventario') renderInventarioTab();
 }
 
 function setDay(d,btn){
@@ -1048,42 +1071,6 @@ function renderInsertTab(){
     <span id="rank-save-msg" style="margin-left:10px;font-size:12px;color:var(--green);display:none">${t('saved')}</span>
   </div>`;
 
-  // ── ALLENATORE PER GRUPPO ──────────────────────────────────────
-  const groups=[
-    {key:'SR', label:t('grp_sprint'),  discs:['100m','200m','400m']},
-    {key:'MR', label:t('grp_mid'),     discs:['800m','1500m']},
-    {key:'LR', label:t('grp_long'),    discs:['5000m','10000m','Marathon']},
-    {key:'H',  label:t('grp_hurdles'), discs:['110H','400H','3000S']},
-    {key:'J',  label:t('grp_jumps'),   discs:['LJ','TJ','HJ','PV']},
-    {key:'T',  label:t('grp_throws'),  discs:['SP','DT','HT','JT']},
-  ];
-
-  h+=`<div class="card">
-    <div class="card-title">${t('coach')} ${t('center')}</div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
-      ${lang==='it'
-        ? 'Inserisci il valore dell\'allenatore per ogni gruppo. Aggiorna solo quando fai un upgrade — rimane salvato.'
-        : 'Enter the coach value per group. Update only when you upgrade — it stays saved.'}
-    </p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">`;
-
-  groups.forEach(({key,label})=>{
-    const gk=key.toLowerCase();
-    h+=`<div class="input-group" style="min-width:120px">
-      <label style="font-size:11px">${key} — ${label}</label>
-      <input type="number" id="coa_${key}" step="100" value="${myRank['coach_'+gk]||''}" placeholder="es. 1000">
-    </div>`;
-  });
-
-  h+=`</div>
-    <p style="font-size:11px;color:var(--text3);margin-top:10px;margin-bottom:10px">
-      ${lang==='it'
-        ? '💡 I gruppi sono: SR = Sprint · MR = Mezza dist. · LR = Lunga dist. · H = Ostacoli · J = Salti · T = Lanci'
-        : '💡 Groups: SR = Sprint · MR = Mid dist. · LR = Long dist. · H = Hurdles · J = Jumps · T = Throws'}
-    </p>
-    <button class="btn-primary-sm" onclick="saveGruppi()">${t('save_gear')}</button>
-    <span id="gruppi-save-msg" style="margin-left:10px;font-size:12px;color:var(--green);display:none">${t('saved')}</span>
-  </div>`;
 
   // ── OBBLIGATORIE ──────────────────────────────────────────
   h+=`<div class="card">
@@ -1654,6 +1641,215 @@ async function changePassword(){
   }catch(e){
     msg.style.display='inline'; msg.style.color='var(--red)';
     msg.textContent='Errore: '+e.message;
+  }
+}
+
+
+// ── INVENTORY DATA ───────────────────────────────────────────
+let inventoryData = {}; // player_id -> row
+
+async function loadInventoryData() {
+  try {
+    const rows = await sbGet('italy_inventory', 'select=*');
+    inventoryData = {};
+    (rows||[]).forEach(r => { inventoryData[r.player_id] = r; });
+  } catch(e) { console.error('Inventory load error:', e); }
+}
+
+// ── INVENTORY RENDER ─────────────────────────────────────────
+const INV_GROUPS = [
+  {key:'sr', label:()=>t('grp_sprint')},
+  {key:'mr', label:()=>t('grp_mid')},
+  {key:'lr', label:()=>t('grp_long')},
+  {key:'h',  label:()=>t('grp_hurdles')},
+  {key:'j',  label:()=>t('grp_jumps')},
+  {key:'t',  label:()=>t('grp_throws')},
+];
+const DISC_KEYS = ['100m','200m','400m','800m','1500m','5000m','10000m','marathon','110h','400h','3000s','lj','tj','hj','pv','sp','dt','ht','jt'];
+const DISC_LABELS = {'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','marathon':'Marathon','110h':'110H / 100H','400h':'400H','3000s':'3000S','lj':'Lungo / LJ','tj':'Triplo / TJ','hj':'Alto / HJ','pv':'Asta / PV','sp':'Peso / SP','dt':'Disco / DT','ht':'Martello / HT','jt':'Giavellotto / JT'};
+
+function toggleColl(id) {
+  const body = document.getElementById('coll-body-'+id);
+  const arrow = document.getElementById('coll-arrow-'+id);
+  if(!body) return;
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function invPair(prefix, label, inv, step=100) {
+  const lv = inv[prefix+'_level'] != null ? inv[prefix+'_level'] : '';
+  const vl = inv[prefix+'_value'] != null ? inv[prefix+'_value'] : '';
+  return `<div class="inv-pair">
+    <div class="inv-pair-label">${label}</div>
+    <div class="inv-pair-inputs">
+      <input class="lv-input" type="number" id="inv_${prefix}_level" min="1" max="15" step="1" value="${lv}" placeholder="Lv">
+      <input type="number" id="inv_${prefix}_value" min="0" step="${step}" value="${vl}" placeholder="Val">
+    </div>
+  </div>`;
+}
+
+function renderInventarioTab() {
+  const targetPlayer = isAdmin && adminActingAs ? adminActingAs : currentUser.id;
+  const targetName   = isAdmin && adminActingAs
+    ? (allPlayers.find(p=>p.id===adminActingAs)?.name || adminActingAs)
+    : currentUser.name;
+  const inv = inventoryData[targetPlayer] || {};
+
+  let h = '';
+
+  // Admin selector
+  if(isAdmin) {
+    h += `<div class="card">
+      <div class="card-title">${t('admin_mode')}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="inv-admin-player-sel" onchange="setInvAdminPlayer()" style="font-size:14px;padding:8px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);width:200px">
+          <option value="">— me stesso (${currentUser.name}) —</option>
+          ${allPlayers.filter(p=>p.id!==currentUser.id&&p.active!==false).map(p=>`<option value="${p.id}"${adminActingAs===p.id?' selected':''}>${p.name}</option>`).join('')}
+        </select>
+        <span style="font-size:12px;color:var(--text3)">${lang==='it'?'Stai inserendo dati per':'Inserting data for'}: <strong>${targetName}</strong></span>
+      </div>
+    </div>`;
+  }
+
+  // Helper: collapsible card
+  function collCard(id, emoji, title, bodyHTML, saveKey) {
+    return `<div class="card" style="padding:14px 18px">
+      <div class="coll-header" onclick="toggleColl('${id}')">
+        <span class="coll-title">${emoji} ${title}</span>
+        <span class="coll-arrow" id="coll-arrow-${id}">▶</span>
+      </div>
+      <div class="coll-body" id="coll-body-${id}">
+        ${bodyHTML}
+        <div style="margin-top:14px">
+          <button class="btn-primary-sm" onclick="saveInventory('${saveKey}','${targetPlayer}')">${lang==='it'?'Salva':'Save'}</button>
+          <span id="inv-save-${saveKey}" style="margin-left:10px;font-size:12px;color:var(--green);display:none">✓ ${lang==='it'?'Salvato!':'Saved!'}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // 1. ALLENATORI
+  let coachHTML = `<div class="inv-grid">`;
+  INV_GROUPS.forEach(g => {
+    coachHTML += invPair('coach_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100);
+  });
+  coachHTML += '</div>';
+  h += collCard('coach', '💧', lang==='it'?'Allenatori':'Coaches', coachHTML, 'coach');
+
+  // 2. ATLETI M
+  let athlMHTML = `<div class="inv-grid">`;
+  athlMHTML += invPair('athlete_m_dec', lang==='it'?'Decatleta':'Decathlete', inv, 100);
+  INV_GROUPS.forEach(g => {
+    athlMHTML += invPair('athlete_m_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100);
+  });
+  athlMHTML += '</div>';
+  h += collCard('athlm', '🔥', lang==='it'?'Atleti — Uomini':'Athletes — Men', athlMHTML, 'athlm');
+
+  // 3. ATLETI F
+  let athlFHTML = `<div class="inv-grid">`;
+  athlFHTML += invPair('athlete_f_hep', lang==='it'?'Eptatleta':'Heptathlete', inv, 100);
+  INV_GROUPS.forEach(g => {
+    athlFHTML += invPair('athlete_f_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100);
+  });
+  athlFHTML += '</div>';
+  h += collCard('athlf', '🔥', lang==='it'?'Atleti — Donne':'Athletes — Women', athlFHTML, 'athlf');
+
+  // 4. CENTRO M
+  let cenMHTML = `<div class="inv-grid">`;
+  DISC_KEYS.forEach(dk => { cenMHTML += invPair('center_m_'+dk, DISC_LABELS[dk], inv, 50); });
+  cenMHTML += '</div>';
+  h += collCard('cenm', '🏟', lang==='it'?'Centro Allenamento — Uomini':'Training Centre — Men', cenMHTML, 'cenm');
+
+  // 5. CENTRO F
+  let cenFHTML = `<div class="inv-grid">`;
+  DISC_KEYS.forEach(dk => { cenFHTML += invPair('center_f_'+dk, DISC_LABELS[dk], inv, 50); });
+  cenFHTML += '</div>';
+  h += collCard('cenf', '🏟', lang==='it'?'Centro Allenamento — Donne':'Training Centre — Women', cenFHTML, 'cenf');
+
+  // 6. ATTREZZATURA M
+  const gearPieces = [
+    {key:'jersey',  label:lang==='it'?'Maglia':'Jersey'},
+    {key:'shorts',  label:lang==='it'?'Pantaloni':'Shorts'},
+    {key:'shoes',   label:lang==='it'?'Scarpe':'Shoes'},
+  ];
+  let gearMHTML = '';
+  gearPieces.forEach(({key,label}) => {
+    gearMHTML += `<div class="inv-sub">${label}</div><div class="inv-grid">`;
+    DISC_KEYS.forEach(dk => { gearMHTML += invPair(key+'_m_'+dk, DISC_LABELS[dk], inv, 10); });
+    gearMHTML += '</div>';
+  });
+  h += collCard('gearm', '👕', lang==='it'?'Attrezzatura — Uomini':'Equipment — Men', gearMHTML, 'gearm');
+
+  // 7. ATTREZZATURA F
+  let gearFHTML = '';
+  gearPieces.forEach(({key,label}) => {
+    gearFHTML += `<div class="inv-sub">${label}</div><div class="inv-grid">`;
+    DISC_KEYS.forEach(dk => { gearFHTML += invPair(key+'_f_'+dk, DISC_LABELS[dk], inv, 10); });
+    gearFHTML += '</div>';
+  });
+  h += collCard('gearf', '👕', lang==='it'?'Attrezzatura — Donne':'Equipment — Women', gearFHTML, 'gearf');
+
+  document.getElementById('inventario-content').innerHTML = h;
+}
+
+function setInvAdminPlayer() {
+  const sel = document.getElementById('inv-admin-player-sel');
+  adminActingAs = sel.value || null;
+  renderInventarioTab();
+}
+
+// ── INVENTORY SAVE ───────────────────────────────────────────
+const INV_SECTION_KEYS = {
+  coach: ['sr','mr','lr','h','j','t'].flatMap(g=>['coach_'+g+'_level','coach_'+g+'_value']),
+  athlm: ['dec','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_m_'+g+'_level','athlete_m_'+g+'_value']),
+  athlf: ['hep','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_f_'+g+'_level','athlete_f_'+g+'_value']),
+  cenm:  DISC_KEYS.flatMap(dk=>['center_m_'+dk+'_level','center_m_'+dk+'_value']),
+  cenf:  DISC_KEYS.flatMap(dk=>['center_f_'+dk+'_level','center_f_'+dk+'_value']),
+  gearm: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_m_'+dk+'_level',p+'_m_'+dk+'_value'])),
+  gearf: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_f_'+dk+'_level',p+'_f_'+dk+'_value'])),
+};
+
+async function saveInventory(section, targetPlayer) {
+  const msg = document.getElementById('inv-save-'+section);
+  const keys = INV_SECTION_KEYS[section] || [];
+  const existing = inventoryData[targetPlayer] || {};
+  const data = {...existing, player_id: targetPlayer, updated_at: new Date().toISOString()};
+
+  keys.forEach(k => {
+    const el = document.getElementById('inv_'+k);
+    if(!el) return;
+    const val = el.value.trim();
+    data[k] = val !== '' ? parseInt(val) : null;
+  });
+
+  try {
+    await sb('italy_inventory?on_conflict=player_id', {
+      method:'POST', body:JSON.stringify(data),
+      prefer:'resolution=merge-duplicates,return=representation'
+    });
+    inventoryData[targetPlayer] = data;
+
+    // Se stiamo salvando gli allenatori, sync valori in italy_rankings per l'ottimizzatore
+    if(section === 'coach' && weekData) {
+      const rankExisting = rankings[targetPlayer] || {};
+      const rankPatch = {...rankExisting, week_id: weekData.id, player_id: targetPlayer, updated_at: new Date().toISOString()};
+      ['sr','mr','lr','h','j','t'].forEach(g => {
+        const v = data['coach_'+g+'_value'];
+        if(v != null) rankPatch['coach_'+g] = v;
+      });
+      try {
+        await sb('italy_rankings?on_conflict=week_id,player_id', {
+          method:'POST', body:JSON.stringify(rankPatch),
+          prefer:'resolution=merge-duplicates,return=representation'
+        });
+        rankings[targetPlayer] = rankPatch;
+      } catch(e) { console.error('Coach sync error:', e); }
+    }
+
+    msg.style.display = 'inline';
+    setTimeout(() => msg.style.display = 'none', 3000);
+  } catch(e) {
+    alert((lang==='it'?'Errore nel salvataggio: ':'Save error: ')+e.message);
   }
 }
 
