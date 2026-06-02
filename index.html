@@ -451,6 +451,7 @@ async function init() {
   if (savedUser) {
     try {
       currentUser = JSON.parse(savedUser);
+      isAdmin = !!currentUser.is_admin;
       await loginSuccess();
       return;
     } catch(e) {
@@ -655,20 +656,77 @@ function setStaffMode(m,btn){
 // ── OBL SUMMARY ──────────────────────────────────────────────
 function renderOblSummary(){
   const obl=oblData[currentDay]||{};
-  let h=`<table><thead><tr><th>${t('player')}</th><th>${t('level')}</th><th>Obl 1</th><th>Rank</th><th>Obl 2</th><th>Rank</th></tr></thead><tbody>`;
-  const players = allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false);
+
+  // Build per-discipline map: disc -> [{player, isTop}]
+  const discMap={};
+  DISCS.forEach(d=>discMap[d]=[]);
   for(const p of players){
     const ds=obl[p.id]||[];
-    h+=`<tr>
-      <td style="font-weight:600">${p.name}</td>
-      <td>${TOP_NAMES.has(p.id)?'<span class="badge b-top">TOP</span>':'<span class="badge b-gray">—</span>'}</td>
-      <td>${ds[0]?`<span class="badge b-obl">${DL[ds[0]]||ds[0]}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
-      <td>${ds[0]?rPill(p.id,ds[0]):'—'}</td>
-      <td>${ds[1]?`<span class="badge b-obl">${DL[ds[1]]||ds[1]}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
-      <td>${ds[1]?rPill(p.id,ds[1]):'—'}</td>
-    </tr>`;
+    ds.forEach(d=>{
+      if(d && discMap[d]) discMap[d].push({id:p.id,name:p.id,isTop:TOP_NAMES.has(p.id)});
+    });
   }
-  h+='</tbody></table>';
+
+  // Group by group code
+  const groups=[
+    {code:'SR',label:'Sprint',discs:['100m','200m','400m']},
+    {code:'MR',label:'Middle',discs:['800m','1500m']},
+    {code:'LR',label:'Long',discs:['5000m','10000m','Marathon']},
+    {code:'H', label:'Hurdles',discs:['110H','400H','3000S']},
+    {code:'J', label:'Jumps',discs:['LJ','TJ','HJ','PV']},
+    {code:'T', label:'Throws',discs:['SP','DT','HT','JT']},
+  ];
+
+  // Figure out max players per discipline for column sizing
+  let maxPerDisc=0;
+  DISCS.forEach(d=>{ if(discMap[d].length>maxPerDisc) maxPerDisc=discMap[d].length; });
+  const cols=Math.max(maxPerDisc,4); // at least 4 player columns
+
+  let h=`<table style="font-size:11px">
+    <thead><tr>
+      <th style="min-width:36px">Grp</th>
+      <th style="min-width:52px">Disciplina</th>
+      <th style="min-width:18px;text-align:center">N</th>
+      ${Array.from({length:cols},(_,i)=>`<th style="min-width:80px">P${i+1}</th>`).join('')}
+    </tr></thead>
+    <tbody>`;
+
+  groups.forEach(grp=>{
+    grp.discs.forEach((d,di)=>{
+      const ps=discMap[d]||[];
+      const cnt=ps.length;
+      let cntBadge='';
+      if(cnt===0) cntBadge=`<span class="badge b-err">0</span>`;
+      else if(cnt>3) cntBadge=`<span class="badge b-warn">${cnt}</span>`;
+      else if(cnt>=2) cntBadge=`<span class="badge b-lib">${cnt}</span>`;
+      else cntBadge=`<span class="badge b-obl">${cnt}</span>`;
+
+      const groupCell = di===0
+        ? `<td rowspan="${grp.discs.length}" style="font-weight:700;text-align:center;vertical-align:middle;font-family:var(--mono);font-size:10px;color:var(--royal);background:var(--royallt);border-radius:4px">${grp.code}</td>`
+        : '';
+
+      const playerCells=Array.from({length:cols},(_,i)=>{
+        const p=ps[i];
+        if(!p) return `<td></td>`;
+        const rank=getRank(p.id,d);
+        const topBadge=p.isTop?` <span style="font-size:8px;color:var(--gold);font-weight:700">★</span>`:'';
+        return `<td style="white-space:nowrap">
+          <span style="font-weight:600;font-size:11px">${p.id}</span>${topBadge}
+          ${rank?`<span class="rp ${rClass(rank)}" style="width:18px;height:16px;line-height:16px;font-size:9px">${rank}</span>`:''}
+        </td>`;
+      }).join('');
+
+      h+=`<tr>
+        ${groupCell}
+        <td><span class="badge b-obl" style="font-size:10px">${DL[d]||d}</span></td>
+        <td style="text-align:center">${cntBadge}</td>
+        ${playerCells}
+      </tr>`;
+    });
+  });
+
+  h+=`</tbody></table>`;
   document.getElementById('obl-summary').innerHTML=h;
 }
 
@@ -883,8 +941,9 @@ function renderMessaggio(obl,libere,discCount,altriGuide){
   const ords=['1st','2nd','3rd','4th'];const keys=['A','B','C','D'];
   let staffText='';
   keys.forEach((k,i)=>{staffText+=`${ords[i]} Relay 4x100: ${(s100[k]||[]).join(' ').toUpperCase()}\n`;});
+  staffText+=`\n`;
   keys.forEach((k,i)=>{staffText+=`${ords[i]} Relay 4x400: ${(s400[k]||[]).join(' ').toUpperCase()}\n`;});
-  staffText+=`Quinta e Sesta a scelta libera / Fifth and Sixth relay free choice.`;
+  staffText+=`\nQuinta e Sesta a scelta libera / Fifth and Sixth relay free choice.`;
 
   const players=allPlayers.filter(p=>p.active!==false);
   const topPlayers=players.filter(p=>TOP_NAMES.has(p.id)&&(obl[p.id]||[]).length>0);
