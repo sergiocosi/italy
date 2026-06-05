@@ -133,7 +133,21 @@ tbody tr:hover td{background:var(--bg3)}
 .rnum{width:18px;height:18px;border-radius:50%;background:var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;font-family:var(--mono)}
 .pname{font-weight:600;min-width:90px}
 
-/* TROFEI BAR */
+/* STAFFETTE OVERRIDE EDITOR */
+.relay-edit-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.relay-edit-mode .squad-card{border-style:dashed;cursor:default}
+.relay-edit-mode .squad-card.drag-over{background:var(--royallt);border-color:var(--royal)}
+.runner.draggable{cursor:grab;transition:opacity .15s}
+.runner.draggable:active{cursor:grabbing}
+.runner.dragging{opacity:.35}
+.runner.drag-target{background:var(--royallt)}
+.squad-modified-badge{font-size:9px;background:var(--goldlt);color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:1px 6px;font-family:var(--mono);font-weight:700;margin-left:4px}
+.btn-edit-relay{font-size:11px;padding:4px 10px;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text2);border-radius:var(--radius);cursor:pointer;-webkit-appearance:none;font-family:var(--font);font-weight:600}
+.btn-edit-relay:hover{border-color:var(--royal);color:var(--royal)}
+.btn-edit-relay.active{background:var(--royallt);border-color:var(--royal);color:var(--royal)}
+.btn-reset-relay{font-size:11px;padding:4px 10px;background:var(--redlt);border:1.5px solid #f0c0c0;color:var(--red);border-radius:var(--radius);cursor:pointer;-webkit-appearance:none;font-family:var(--font);font-weight:600}
+.btn-reset-relay:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.relay-edit-hint{font-size:10px;color:var(--text3);font-family:var(--mono)}
 .tbar{display:inline-block;width:48px;height:4px;background:var(--border);border-radius:2px;vertical-align:middle;overflow:hidden}
 .tbar-fill{height:100%;background:var(--gold);border-radius:2px}
 
@@ -408,6 +422,8 @@ let currentUser=null;
 let isAdmin=false;
 let currentDay=1;
 let staffMode='serpentino';
+let staffOverride={};   // {'100m':{A:[],B:[],C:[],D:[]},'400m':{...}} — sovrascrive buildSquads
+let staffEditMode={};   // {'100m':true} — modalità edit attiva per disciplina
 let weekData=null;
 let pbDrafts={};
 let allPlayers=[];
@@ -516,6 +532,7 @@ async function loginSuccess() {
 
   await loadWeekData();
   await loadAllData();
+  loadOverrideFromStorage();
   await loadInventoryData();
   renderOblSummary();
   renderInsertTab();
@@ -936,8 +953,8 @@ async function pubblicaMessaggio(msgText, staffMode){
 function renderMessaggio(obl,libere,discCount,altriGuide){
   const dayIT={1:'LUNEDÌ',2:'MARTEDÌ',3:'MERCOLEDÌ',4:'GIOVEDÌ'};
   const dayEN={1:'MONDAY',2:'TUESDAY',3:'WEDNESDAY',4:'THURSDAY'};
-  const s100=buildSquads('100m',staffMode);
-  const s400=buildSquads('400m',staffMode);
+  const s100=getSquads('100m');
+  const s400=getSquads('400m');
   const ords=['1st','2nd','3rd','4th'];const keys=['A','B','C','D'];
   let staffText='';
   keys.forEach((k,i)=>{staffText+=`${ords[i]} Relay 4x100: ${(s100[k]||[]).join(' ').toUpperCase()}\n`;});
@@ -1014,6 +1031,19 @@ function renderMessaggio(obl,libere,discCount,altriGuide){
 }
 
 // ── STAFFETTE ────────────────────────────────────────────────
+function getSquads(disc){
+  return staffOverride[disc] || buildSquads(disc,staffMode);
+}
+function saveOverrideToStorage(){
+  try{localStorage.setItem('staffOverride_'+weekData?.id,JSON.stringify(staffOverride));}catch(e){}
+}
+function loadOverrideFromStorage(){
+  try{
+    const raw=localStorage.getItem('staffOverride_'+weekData?.id);
+    if(raw) staffOverride=JSON.parse(raw);
+  }catch(e){staffOverride={};}
+}
+
 function buildSquads(disc,mode){
   const players=allPlayers.filter(p=>p.active!==false);
   const ranked=players.map(p=>({p:p.id,r:getScore(p.id,disc)||0})).filter(x=>x.r>0).sort((a,b)=>b.r-a.r);
@@ -1040,24 +1070,118 @@ function buildSquads(disc,mode){
 function renderStaffette(){
   let h='';
   for(const disc of['100m','400m']){
-    const squads=buildSquads(disc,staffMode);
-    h+=`<div class="card"><div class="card-title">${disc==='100m'?'4×100m':'4×400m'}</div>`;
+    const squads=getSquads(disc);
+    const editMode=!!staffEditMode[disc];
+    const hasOverride=!!staffOverride[disc];
+    const baseSquads=buildSquads(disc,staffMode); // per confronto badge modificato
+
+    h+=`<div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="card-title" style="margin-bottom:0;border-bottom:none">${disc==='100m'?'4×100m':'4×400m'}</div>`;
+
+    if(isAdmin){
+      h+=`<div style="margin-left:auto;display:flex;gap:6px;align-items:center">`;
+      if(hasOverride){
+        h+=`<button class="btn-reset-relay" onclick="resetRelayOverride('${disc}')">↺ Reset auto</button>`;
+      }
+      h+=`<button class="btn-edit-relay${editMode?' active':''}" onclick="toggleRelayEditMode('${disc}')">
+        ${editMode?'✓ Fine modifica':'✏️ Modifica staffette'}
+      </button></div>`;
+    }
+    h+=`</div>`;
+
+    if(editMode){
+      h+=`<div class="relay-edit-hint" style="margin-bottom:10px">🖱 Trascina un atleta da una griglia all'altra per scambiarlo · Le griglie A–D partecipano ai punti</div>`;
+    }
+
+    h+=`<div class="${editMode?'relay-edit-mode':''}">`;
+
     [['A',`${t('relay')} 1`,'sq-a',t('relay_note1')],['B',`${t('relay')} 2`,'sq-b',t('relay_note1')],
      ['C',`${t('relay')} 3`,'sq-c',t('relay_note1')],['D',`${t('relay')} 4`,'sq-d',t('relay_note4')],
      ['E',`${t('relay')} 5`,'sq-x',t('relay_free')],['F',`${t('relay')} 6`,'sq-x',t('relay_free')]].forEach(([k,lbl,cls,note])=>{
       const m=squads[k]||[];if(!m.length)return;
+      const baseM=baseSquads[k]||[];
+      const wasModified=hasOverride&&JSON.stringify(m.slice().sort())!==JSON.stringify(baseM.slice().sort());
       const sum=m.reduce((s,p)=>s+(getScore(p,disc)||0),0);
-      h+=`<div class="squad-card ${cls}">
-        <div class="squad-header"><span class="squad-label">${lbl}</span><span class="badge b-gray">${note}</span><span class="squad-stats">Σ${sum.toLocaleString()}</span></div>`;
+      const squadId=`squad-${disc.replace('m','').replace('×','x')}-${k}`;
+      h+=`<div class="squad-card ${cls}" id="${squadId}"
+        ${editMode?`ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="dropRunner(event,'${disc}','${k}');this.classList.remove('drag-over')"`:''}>
+        <div class="squad-header">
+          <span class="squad-label">${lbl}</span>
+          <span class="badge b-gray">${note}</span>
+          ${wasModified?'<span class="squad-modified-badge">✎ mod</span>':''}
+          <span class="squad-stats">Σ${sum.toLocaleString()}</span>
+        </div>`;
       m.forEach((p,i)=>{
-        h+=`<div class="runner"><span class="rnum">${i+1}</span><span class="pname">${p}</span>
-          <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3)">${(getScore(p,disc)||0).toLocaleString()} ${rPill(p,disc)}</span></div>`;
+        h+=`<div class="runner${editMode?' draggable':''}" ${editMode?`draggable="true"
+          ondragstart="dragStartRunner(event,'${disc}','${k}','${p}')"
+          ondragend="this.classList.remove('dragging')"
+          ondragover="event.preventDefault();event.stopPropagation()"
+          ondrop="event.stopPropagation();dropRunner(event,'${disc}','${k}');document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'))"`:''}>
+          <span class="rnum">${i+1}</span>
+          <span class="pname">${p}</span>
+          <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3)">${(getScore(p,disc)||0).toLocaleString()} ${rPill(p,disc)}</span>
+        </div>`;
       });
       h+=`</div>`;
     });
-    h+=`</div>`;
+    h+=`</div></div>`;
   }
   document.getElementById('staffette-content').innerHTML=h;
+}
+
+// ── DRAG & DROP STAFFETTE ────────────────────────────────────
+let _dragSource={disc:null,squad:null,player:null};
+
+function dragStartRunner(event,disc,squad,player){
+  _dragSource={disc,squad,player};
+  event.dataTransfer.effectAllowed='move';
+  event.dataTransfer.setData('text/plain',player);
+  setTimeout(()=>event.target.classList.add('dragging'),0);
+}
+
+function dropRunner(event,disc,targetSquad){
+  event.preventDefault();
+  const{disc:srcDisc,squad:srcSquad,player}=_dragSource;
+  if(!player||srcDisc!==disc||srcSquad===targetSquad) return;
+
+  // Copia squads correnti come override (parte da override se esiste, altrimenti da buildSquads)
+  const base=staffOverride[disc]||buildSquads(disc,staffMode);
+  // Deep copy
+  const ov={};
+  ['A','B','C','D','E','F'].forEach(k=>{ov[k]=[...(base[k]||[])];});
+
+  const srcIdx=ov[srcSquad].indexOf(player);
+  if(srcIdx===-1) return;
+
+  const tgtList=ov[targetSquad];
+  // Se la griglia target ha già 4, fai swap col primo; altrimenti sposta
+  if(tgtList.length>=4){
+    const swapPlayer=tgtList[0];
+    tgtList[0]=player;
+    ov[srcSquad][srcIdx]=swapPlayer;
+  } else {
+    ov[srcSquad].splice(srcIdx,1);
+    tgtList.push(player);
+  }
+
+  staffOverride[disc]=ov;
+  saveOverrideToStorage();
+  renderStaffette();
+}
+
+function toggleRelayEditMode(disc){
+  staffEditMode[disc]=!staffEditMode[disc];
+  renderStaffette();
+}
+
+function resetRelayOverride(disc){
+  delete staffOverride[disc];
+  delete staffEditMode[disc];
+  saveOverrideToStorage();
+  renderStaffette();
 }
 
 // ── RANKING ──────────────────────────────────────────────────
@@ -1320,12 +1444,12 @@ const PB_COL = {
      'SP':'pb_f_sp','DT':'pb_f_dt','HT':'pb_f_ht','JT':'pb_f_jt'}
 };
 const PB_HINT = {
-  '100m':'10.45','200m':'20.89','400m':'46.78',
-  '800m':'1:45.23','1500m':'3:45.00','5000m':'13:45.00',
-  '10000m':'27:45.00','Marathon':'2:10:45',
-  '110H':'13.45','400H':'48.54','3000S':'8:15.00',
-  'LJ':'7.23m','TJ':'15.45m','HJ':'2.10m','PV':'5.60m',
-  'SP':'18.50m','DT':'55.00m','HT':'65.00m','JT':'72.00m'
+  '100m':'10.450','200m':'20.890','400m':'46.780',
+  '800m':'1:45.230','1500m':'3:45.000','5000m':'13:45.000',
+  '10000m':'27:45.000','Marathon':'2:10:45.000',
+  '110H':'13.450','400H':'48.540','3000S':'8:15.000',
+  'LJ':'7.230m','TJ':'15.450m','HJ':'2.100m','PV':'5.600m',
+  'SP':'18.500m','DT':'55.000m','HT':'65.000m','JT':'72.000m'
 };
 // Label disciplina per genere (100H donne invece di 110H)
 function pbLabel(disc,g){ return (disc==='110H'&&g==='F')?'100H':(DL[disc]||disc); }
@@ -1334,10 +1458,16 @@ function formatPB(val,disc){
   if(val==null||val===''||val===0) return '—';
   const v=parseFloat(val);
   if(isNaN(v)||v<=0) return '—';
-  if(FIELD_EVENTS.has(disc)) return v.toFixed(2)+'m';
-  if(v>=3600){const h=Math.floor(v/3600),m=Math.floor((v%3600)/60),s=Math.round(v%60).toString().padStart(2,'0');return `${h}:${m.toString().padStart(2,'0')}:${s}`;}
-  if(v>=60){const m=Math.floor(v/60),s=(v%60).toFixed(2).padStart(5,'0');return `${m}:${s}`;}
-  return v.toFixed(2);
+  if(FIELD_EVENTS.has(disc)) return v.toFixed(3)+'m';
+  if(v>=3600){
+    const h=Math.floor(v/3600);
+    const mPart=Math.floor((v%3600)/60);
+    const sRaw=v%60;
+    const sFmt=sRaw.toFixed(3).padStart(6,'0');
+    return `${h}:${mPart.toString().padStart(2,'0')}:${sFmt}`;
+  }
+  if(v>=60){const m=Math.floor(v/60),s=(v%60).toFixed(3).padStart(6,'0');return `${m}:${s}`;}
+  return v.toFixed(3);
 }
 // Parsa input utente ("10.45", "1:45.23", "2:10:45") → secondi o metri
 function parsePB(str){
