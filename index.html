@@ -1898,14 +1898,54 @@ function toggleColl(id) {
   arrow.classList.toggle('open');
 }
 
-function invPair(prefix, label, inv, step=100) {
+// Lookup table livello → valore per allenatori, atleti, universale e centri
+const INV_LOOKUP = {
+  coach:      {9:200, 10:400, 11:600, 12:800, 13:1000, 14:1200, 15:1500},
+  atleta:     {9:1000, 10:1500, 11:2000, 12:2650, 13:3300, 14:4000, 15:4800},
+  universale: {9:600, 10:910, 11:1200, 12:1600, 13:2000, 14:2700, 15:3500},
+  centro:     {1:120, 2:160, 3:210, 4:260, 5:310, 6:360, 7:410, 8:460, 9:500, 10:560, 11:600, 12:650, 13:700, 14:800, 15:1000},
+};
+
+function invLookupValue(lookupType, level) {
+  if (!lookupType || !INV_LOOKUP[lookupType]) return null;
+  const lv = parseInt(level);
+  return isNaN(lv) ? null : (INV_LOOKUP[lookupType][lv] ?? null);
+}
+
+function onInvLevelChange(prefix, lookupType) {
+  if (!lookupType) return;
+  const lvEl = document.getElementById('inv_'+prefix+'_level');
+  const vlEl = document.getElementById('inv_'+prefix+'_value');
+  if (!lvEl || !vlEl) return;
+  const looked = invLookupValue(lookupType, lvEl.value);
+  if (looked !== null) {
+    vlEl.value = looked;
+    vlEl.readOnly = true;
+    vlEl.style.background = 'var(--bg3)';
+    vlEl.style.color = 'var(--text3)';
+    vlEl.style.cursor = 'default';
+  } else {
+    vlEl.readOnly = false;
+    vlEl.style.background = '';
+    vlEl.style.color = '';
+    vlEl.style.cursor = '';
+  }
+}
+
+function invPair(prefix, label, inv, step=100, lookupType=null) {
   const lv = inv[prefix+'_level'] != null ? inv[prefix+'_level'] : '';
   const vl = inv[prefix+'_value'] != null ? inv[prefix+'_value'] : '';
+  // Se c'è già un livello salvato e una lookup, calcola se il valore corrisponde
+  const hasLookup = !!lookupType;
+  const lookedVal = hasLookup && lv !== '' ? invLookupValue(lookupType, lv) : null;
+  const isLocked = lookedVal !== null;
+  const valStyle = isLocked ? 'background:var(--bg3);color:var(--text3);cursor:default;' : '';
+  const onchange = hasLookup ? `oninput="onInvLevelChange('${prefix}','${lookupType}')"` : '';
   return `<div class="inv-pair">
     <div class="inv-pair-label">${label}</div>
     <div class="inv-pair-inputs">
-      <input class="lv-input" type="number" id="inv_${prefix}_level" min="1" max="15" step="1" value="${lv}" placeholder="Lv">
-      <input type="number" id="inv_${prefix}_value" min="0" step="${step}" value="${vl}" placeholder="Val">
+      <input class="lv-input" type="number" id="inv_${prefix}_level" min="1" max="15" step="1" value="${lv}" placeholder="Lv" ${onchange}>
+      <input type="number" id="inv_${prefix}_value" min="0" step="${step}" value="${vl}" placeholder="Val" ${isLocked?'readonly':''} style="${valStyle}">
     </div>
   </div>`;
 }
@@ -1953,38 +1993,38 @@ function renderInventarioTab() {
   // 1. ALLENATORI
   let coachHTML = `<div class="inv-grid">`;
   INV_GROUPS.forEach(g => {
-    coachHTML += invPair('coach_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100);
+    coachHTML += invPair('coach_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100, 'coach');
   });
   coachHTML += '</div>';
   h += collCard('coach', '💧', lang==='it'?'Allenatori':'Coaches', coachHTML, 'coach');
 
   // 2. ATLETI M
   let athlMHTML = `<div class="inv-grid">`;
-  athlMHTML += invPair('athlete_m_dec', lang==='it'?'Decatleta':'Decathlete', inv, 100);
+  athlMHTML += invPair('athlete_m_dec', lang==='it'?'Decatleta':'Decathlete', inv, 100, 'universale');
   INV_GROUPS.forEach(g => {
-    athlMHTML += invPair('athlete_m_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100);
+    athlMHTML += invPair('athlete_m_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100, 'atleta');
   });
   athlMHTML += '</div>';
   h += collCard('athlm', '🔥', lang==='it'?'Atleti — Uomini':'Athletes — Men', athlMHTML, 'athlm');
 
   // 3. ATLETI F
   let athlFHTML = `<div class="inv-grid">`;
-  athlFHTML += invPair('athlete_f_hep', lang==='it'?'Eptatleta':'Heptathlete', inv, 100);
+  athlFHTML += invPair('athlete_f_hep', lang==='it'?'Eptatleta':'Heptathlete', inv, 100, 'universale');
   INV_GROUPS.forEach(g => {
-    athlFHTML += invPair('athlete_f_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100);
+    athlFHTML += invPair('athlete_f_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100, 'atleta');
   });
   athlFHTML += '</div>';
   h += collCard('athlf', '🔥', lang==='it'?'Atleti — Donne':'Athletes — Women', athlFHTML, 'athlf');
 
   // 4. CENTRO M
   let cenMHTML = `<div class="inv-grid">`;
-  DISC_KEYS.forEach(dk => { cenMHTML += invPair('center_m_'+dk, DISC_LABELS[dk], inv, 50); });
+  DISC_KEYS.forEach(dk => { cenMHTML += invPair('center_m_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenMHTML += '</div>';
   h += collCard('cenm', '🏟', lang==='it'?'Centro Allenamento — Uomini':'Training Centre — Men', cenMHTML, 'cenm');
 
   // 5. CENTRO F
   let cenFHTML = `<div class="inv-grid">`;
-  DISC_KEYS.forEach(dk => { cenFHTML += invPair('center_f_'+dk, DISC_LABELS[dk], inv, 50); });
+  DISC_KEYS.forEach(dk => { cenFHTML += invPair('center_f_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenFHTML += '</div>';
   h += collCard('cenf', '🏟', lang==='it'?'Centro Allenamento — Donne':'Training Centre — Women', cenFHTML, 'cenf');
 
