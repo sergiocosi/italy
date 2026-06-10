@@ -1898,12 +1898,43 @@ function toggleColl(id) {
   arrow.classList.toggle('open');
 }
 
-// Lookup table livello → valore per allenatori, atleti, universale e centri
+// ── INVENTORY LOOKUP TABLES ──────────────────────────────────
 const INV_LOOKUP = {
-  coach:      {9:200, 10:400, 11:600, 12:800, 13:1000, 14:1200, 15:1500},
-  atleta:     {9:1000, 10:1500, 11:2000, 12:2650, 13:3300, 14:4000, 15:4800},
-  universale: {9:600, 10:910, 11:1200, 12:1600, 13:2000, 14:2700, 15:3500},
-  centro:     {1:120, 2:160, 3:210, 4:260, 5:310, 6:360, 7:410, 8:460, 9:500, 10:560, 11:600, 12:650, 13:700, 14:800, 15:1000},
+  coach:      {9:200,10:400,11:600,12:800,13:1000,14:1200,15:1500},
+  atleta:     {9:1000,10:1500,11:2000,12:2650,13:3300,14:4000,15:4800},
+  universale: {9:600,10:910,11:1200,12:1600,13:2000,14:2700,15:3500},
+  centro:     {1:120,2:160,3:210,4:260,5:310,6:360,7:410,8:460,9:500,10:560,11:600,12:650,13:700,14:800,15:1000},
+  blu:        {2:290,3:540,4:670,5:800,6:920,7:1050,8:1170,9:1300,10:1430,11:1550,12:1680,13:1800,14:1950,15:2100},
+  verde:      {3:570,4:700,5:840,6:970,7:1100,8:1230,9:1360,10:1500,11:1620,12:1760,13:1880,14:2050,15:2200},
+  viola:      {6:1000,7:1140,8:1270,9:1410,10:1550,11:1680,12:1820,13:1940,14:2100,15:2300},
+  oro:        {9:1450,10:1590,11:1730,12:1870,13:2000,14:2200,15:2400},
+};
+
+// Colore fisso per ogni carta (stesso per M e F)
+const GEAR_CARD_COLOR = {
+  jersey_100m:'oro',  jersey_200m:'verde', jersey_400m:'viola', jersey_800m:'blu',
+  jersey_1500m:'verde', jersey_5000m:'blu', jersey_10000m:'viola', jersey_marathon:'verde',
+  jersey_110h:'viola', jersey_400h:'blu',  jersey_3000s:'oro',  jersey_lj:'blu',
+  jersey_tj:'verde',  jersey_hj:'verde',   jersey_pv:'oro',     jersey_sp:'blu',
+  jersey_dt:'oro',    jersey_ht:'verde',   jersey_jt:'viola',
+  shorts_100m:'verde', shorts_200m:'blu',  shorts_400m:'blu',   shorts_800m:'viola',
+  shorts_1500m:'oro',  shorts_5000m:'viola', shorts_10000m:'verde', shorts_marathon:'blu',
+  shorts_110h:'verde', shorts_400h:'viola', shorts_3000s:'verde', shorts_lj:'oro',
+  shorts_tj:'viola',  shorts_hj:'blu',    shorts_pv:'verde',   shorts_sp:'viola',
+  shorts_dt:'viola',  shorts_ht:'oro',    shorts_jt:'blu',
+  shoes_100m:'blu',   shoes_200m:'viola', shoes_400m:'verde',  shoes_800m:'verde',
+  shoes_1500m:'blu',  shoes_5000m:'verde', shoes_10000m:'blu', shoes_marathon:'viola',
+  shoes_110h:'oro',   shoes_400h:'verde', shoes_3000s:'blu',   shoes_lj:'verde',
+  shoes_tj:'blu',     shoes_hj:'oro',     shoes_pv:'viola',    shoes_sp:'oro',
+  shoes_dt:'blu',     shoes_ht:'viola',   shoes_jt:'oro',
+};
+
+// Colori CSS per i badge delle carte
+const GEAR_COLOR_STYLE = {
+  blu:   'background:#1a6bb5;color:#fff;',
+  verde: 'background:#2e7d32;color:#fff;',
+  viola: 'background:#6a1b9a;color:#fff;',
+  oro:   'background:#c17f00;color:#fff;',
 };
 
 function invLookupValue(lookupType, level) {
@@ -1935,14 +1966,27 @@ function onInvLevelChange(prefix, lookupType) {
 function invPair(prefix, label, inv, step=100, lookupType=null) {
   const lv = inv[prefix+'_level'] != null ? inv[prefix+'_level'] : '';
   const vl = inv[prefix+'_value'] != null ? inv[prefix+'_value'] : '';
-  // Se c'è già un livello salvato e una lookup, calcola se il valore corrisponde
-  const hasLookup = !!lookupType;
-  const lookedVal = hasLookup && lv !== '' ? invLookupValue(lookupType, lv) : null;
+
+  // Determina il colore carta (per attrezzatura): usa prefix senza suffisso _m/_f
+  const basePrefix = prefix.replace(/_[mf]_/, '_');
+  const cardColor = GEAR_CARD_COLOR[basePrefix] || null;
+
+  // Risolvi lookupType: se non passato ma c'è un colore carta, usa quello
+  const effectiveLookup = lookupType || cardColor || null;
+
+  const lookedVal = effectiveLookup && lv !== '' ? invLookupValue(effectiveLookup, lv) : null;
   const isLocked = lookedVal !== null;
   const valStyle = isLocked ? 'background:var(--bg3);color:var(--text3);cursor:default;' : '';
-  const onchange = hasLookup ? `oninput="onInvLevelChange('${prefix}','${lookupType}')"` : '';
+  const onchange = effectiveLookup ? `oninput="onInvLevelChange('${prefix}','${effectiveLookup}')"` : '';
+
+  // Badge colore carta (solo attrezzatura)
+  const badgeStyle = cardColor ? GEAR_COLOR_STYLE[cardColor] : null;
+  const badge = badgeStyle
+    ? `<span style="display:inline-block;padding:1px 7px;border-radius:4px;font-size:0.7em;font-weight:700;margin-left:4px;${badgeStyle}">${cardColor.toUpperCase()}</span>`
+    : '';
+
   return `<div class="inv-pair">
-    <div class="inv-pair-label">${label}</div>
+    <div class="inv-pair-label">${label}${badge}</div>
     <div class="inv-pair-inputs">
       <input class="lv-input" type="number" id="inv_${prefix}_level" min="1" max="15" step="1" value="${lv}" placeholder="Lv" ${onchange}>
       <input type="number" id="inv_${prefix}_value" min="0" step="${step}" value="${vl}" placeholder="Val" ${isLocked?'readonly':''} style="${valStyle}">
