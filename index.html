@@ -566,6 +566,7 @@ async function loginSuccess() {
   await loadAllData();
   loadOverrideFromStorage();
   await loadInventoryData();
+  await loadCardsData();
   renderOblSummary();
   renderInsertTab();
   populateDiscSelect();
@@ -2095,6 +2096,9 @@ function renderInventarioTab() {
   });
   h += collCard('gearf', '👕', lang==='it'?'Attrezzatura — Donne':'Equipment — Women', gearFHTML, 'gearf');
 
+  // PROGRESSIONE UPGRADE
+  h += `<div id="prog-wrap">${renderProgressioneCard(targetPlayer)}</div>`;
+
   // BOTTONE EXPORT
   h += `<div style="margin-bottom:20px;padding:14px 18px;background:var(--bg2);border-radius:var(--radius2);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
     <div>
@@ -2496,6 +2500,251 @@ function cancelEditScambio() {
   document.getElementById('sc-nome').value = '';
   document.getElementById('sc-note').value = '';
   onScambiFormChange();
+}
+
+// ── CARDS / PROGRESSIONE ─────────────────────────────────────
+let cardsData = {}; // player_id -> row
+
+async function loadCardsData() {
+  try {
+    const rows = await sbGet('italy_cards', 'select=*');
+    cardsData = {};
+    (rows||[]).forEach(r => { cardsData[r.player_id] = r; });
+  } catch(e) { console.error('Cards load error:', e); }
+}
+
+// Carte necessarie per salire dal livello attuale al successivo
+function cardsNeeded(level) {
+  const map = {9:2, 10:4, 11:10, 12:20, 13:25, 14:30};
+  return map[level] ?? null;
+}
+
+// Categorie tracciate con label e riferimento al livello in italy_inventory
+const CARDS_CATEGORIES = [
+  // atleti M
+  {key:'athlete_m_univ', label:'Atleta M — Universale', invKey:'athlete_m_dec', group:'Atleti M'},
+  {key:'athlete_m_sr',   label:'Atleta M — SR',         invKey:'athlete_m_sr',  group:'Atleti M'},
+  {key:'athlete_m_mr',   label:'Atleta M — MR',         invKey:'athlete_m_mr',  group:'Atleti M'},
+  {key:'athlete_m_lr',   label:'Atleta M — LR',         invKey:'athlete_m_lr',  group:'Atleti M'},
+  {key:'athlete_m_h',    label:'Atleta M — H',          invKey:'athlete_m_h',   group:'Atleti M'},
+  {key:'athlete_m_j',    label:'Atleta M — J',          invKey:'athlete_m_j',   group:'Atleti M'},
+  {key:'athlete_m_t',    label:'Atleta M — T',          invKey:'athlete_m_t',   group:'Atleti M'},
+  // atleti F
+  {key:'athlete_f_hep',  label:'Atleta F — Universale', invKey:'athlete_f_hep', group:'Atleti F'},
+  {key:'athlete_f_sr',   label:'Atleta F — SR',         invKey:'athlete_f_sr',  group:'Atleti F'},
+  {key:'athlete_f_mr',   label:'Atleta F — MR',         invKey:'athlete_f_mr',  group:'Atleti F'},
+  {key:'athlete_f_lr',   label:'Atleta F — LR',         invKey:'athlete_f_lr',  group:'Atleti F'},
+  {key:'athlete_f_h',    label:'Atleta F — H',          invKey:'athlete_f_h',   group:'Atleti F'},
+  {key:'athlete_f_j',    label:'Atleta F — J',          invKey:'athlete_f_j',   group:'Atleti F'},
+  {key:'athlete_f_t',    label:'Atleta F — T',          invKey:'athlete_f_t',   group:'Atleti F'},
+  // allenatori
+  {key:'coach_sr',       label:'Allenatore — SR',       invKey:'coach_sr',      group:'Allenatori'},
+  {key:'coach_mr',       label:'Allenatore — MR',       invKey:'coach_mr',      group:'Allenatori'},
+  {key:'coach_lr',       label:'Allenatore — LR',       invKey:'coach_lr',      group:'Allenatori'},
+  {key:'coach_h',        label:'Allenatore — H',        invKey:'coach_h',       group:'Allenatori'},
+  {key:'coach_j',        label:'Allenatore — J',        invKey:'coach_j',       group:'Allenatori'},
+  {key:'coach_t',        label:'Allenatore — T',        invKey:'coach_t',       group:'Allenatori'},
+];
+
+function getCardLevel(inv, invKey) {
+  return inv[invKey+'_level'] ?? null;
+}
+
+// Calcola lo stato di ogni categoria per un giocatore
+function computeProgressione(playerCards, inv) {
+  return CARDS_CATEGORIES.map(cat => {
+    const have   = playerCards['cards_'+cat.key] ?? 0;
+    const level  = getCardLevel(inv, cat.invKey);
+    const needed = level != null ? cardsNeeded(level) : null;
+    const pct    = needed ? Math.round(have / needed * 100) : null;
+    const missing = needed != null ? Math.max(0, needed - have) : null;
+    let status = 'na'; // not available (lv15 o dati mancanti)
+    if (needed != null) {
+      if (pct >= 100)     status = 'ready';
+      else if (pct >= 70) status = 'close';
+      else if (pct >= 30) status = 'mid';
+      else                status = 'far';
+    }
+    return {...cat, have, needed, missing, pct, level, status};
+  });
+}
+
+function renderProgressioneCard(targetPlayer) {
+  const inv = inventoryData[targetPlayer] || {};
+  const playerCards = cardsData[targetPlayer] || {};
+  const enabled = playerCards.enabled ?? false;
+
+  const items = computeProgressione(playerCards, inv);
+
+  // Trova il consiglio principale: il più vicino all'upgrade (status close/mid, % più alta, non ready)
+  const actionable = items.filter(i => i.status === 'close' || i.status === 'mid' || i.status === 'ready');
+  actionable.sort((a,b) => (b.pct??0) - (a.pct??0));
+  const top = actionable[0];
+
+  const statusStyle = {
+    ready: 'background:#e6f7ef;border-left:4px solid var(--green);',
+    close: 'background:#fff7e0;border-left:4px solid var(--gold);',
+    mid:   'background:var(--bg3);border-left:4px solid var(--border2);',
+    far:   'background:var(--bg3);border-left:4px solid var(--border2);',
+    na:    'background:var(--bg3);border-left:4px solid var(--border2);',
+  };
+  const statusIcon = {ready:'✅', close:'🟡', mid:'🔵', far:'🔴', na:'—'};
+
+  let h = `<div class="card" style="padding:14px 18px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:700">📈 ${lang==='it'?'Progressione upgrade':'Upgrade tracker'}</div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:auto;font-size:12px;color:var(--text2)">
+        <input type="checkbox" id="prog-toggle" ${enabled?'checked':''} onchange="toggleProgressione(this.checked,'${targetPlayer}')"
+          style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer">
+        ${lang==='it'?'Attiva tracker':'Enable tracker'}
+      </label>
+    </div>`;
+
+  if (!enabled) {
+    h += `<div style="font-size:12px;color:var(--text3);font-style:italic;padding:8px 0">
+      ${lang==='it'?'Attiva il tracker per tenere traccia delle carte accumulate e ricevere consigli sugli upgrade.':'Enable the tracker to monitor your card progress and get upgrade recommendations.'}
+    </div></div>`;
+    return h;
+  }
+
+  // Consiglio principale
+  if (top) {
+    const icon = top.pct >= 100 ? '✅' : top.pct >= 70 ? '🟡' : '🔵';
+    let advice = '';
+    if (top.status === 'ready') {
+      advice = lang==='it'
+        ? `<strong>${top.label}</strong> — hai abbastanza carte! Puoi fare l'upgrade quando hai le monete.`
+        : `<strong>${top.label}</strong> — enough cards! Upgrade when you have the coins.`;
+    } else {
+      advice = lang==='it'
+        ? `<strong>${top.label}</strong> — mancano solo <strong>${top.missing}</strong> carte (${top.pct}%). Concentra qui i gettoni gialli.`
+        : `<strong>${top.label}</strong> — only <strong>${top.missing}</strong> cards missing (${top.pct}%). Focus yellow tokens here.`;
+    }
+    h += `<div style="padding:10px 14px;border-radius:var(--radius);margin-bottom:14px;font-size:12px;${statusStyle[top.status]}">
+      ${icon} ${lang==='it'?'Prossimo upgrade consigliato':'Next recommended upgrade'}: ${advice}
+    </div>`;
+  }
+
+  // Tabella per gruppo
+  const groups = ['Atleti M','Atleti F','Allenatori'];
+  groups.forEach(grp => {
+    const grpItems = items.filter(i => i.group === grp);
+    h += `<div style="font-size:10px;font-weight:700;color:var(--royal);letter-spacing:.8px;text-transform:uppercase;margin:12px 0 6px;font-family:var(--mono)">${grp}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:8px">`;
+
+    grpItems.forEach(item => {
+      const barW = item.pct != null ? Math.min(100, item.pct) : 0;
+      const barColor = item.status==='ready'?'var(--green)':item.status==='close'?'var(--gold)':'var(--border2)';
+      const lvLabel = item.level != null ? `lv${item.level}` : '—';
+      const cardLabel = item.needed != null
+        ? `${item.have} / ${item.needed}`
+        : (item.level===15 ? 'MAX' : '—');
+
+      h += `<div style="background:var(--bg3);border-radius:var(--radius);padding:8px 10px;position:relative">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:600">${statusIcon[item.status]} ${item.label.split(' — ')[1]}</span>
+          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${lvLabel}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${barW}%;background:${barColor};border-radius:3px;transition:width .3s"></div>
+          </div>
+          <span style="font-size:10px;font-family:var(--mono);color:var(--text2);white-space:nowrap">${cardLabel}</span>
+        </div>
+        <div style="margin-top:6px">
+          <input type="number" min="0" max="${item.needed??999}" value="${item.have}"
+            onchange="updateCardCount('${item.key}','${targetPlayer}',this.value)"
+            style="width:100%;font-size:12px;padding:4px 6px;border:1.5px solid var(--border2);border-radius:5px;font-family:var(--mono);text-align:center">
+        </div>
+      </div>`;
+    });
+    h += `</div>`;
+  });
+
+  h += `<div style="margin-top:10px;font-size:11px;color:var(--text3)">
+    ${lang==='it'?'💡 Aggiorna il contatore ogni volta che ricevi nuove carte. I dati vengono salvati automaticamente.':'💡 Update the counter whenever you receive new cards. Data saves automatically.'}
+  </div></div>`;
+
+  // Vista admin: riepilogo tutti i giocatori con tracker attivo
+  if (isAdmin) {
+    const activePlayers = allPlayers.filter(p => cardsData[p.id]?.enabled && p.id !== targetPlayer);
+    if (activePlayers.length) {
+      h += `<div class="card" style="padding:14px 18px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">👥 ${lang==='it'?'Progressione — tutti i giocatori':'Progression — all players'}</div>
+        <div style="overflow-x:auto"><table style="font-size:11px">
+          <thead><tr>
+            <th>${lang==='it'?'Giocatore':'Player'}</th>
+            <th>Atleti M</th><th>Atleti F</th><th>${lang==='it'?'Allenatori':'Coaches'}</th>
+            <th>${lang==='it'?'Prossimo upgrade':'Next upgrade'}</th>
+          </tr></thead><tbody>`;
+
+      activePlayers.forEach(p => {
+        const pInv = inventoryData[p.id] || {};
+        const pCards = cardsData[p.id] || {};
+        const pItems = computeProgressione(pCards, pInv);
+
+        // Conta ready/close per gruppo
+        const summary = (grp) => {
+          const grpItems = pItems.filter(i => i.group === grp);
+          const ready = grpItems.filter(i => i.status==='ready').length;
+          const close = grpItems.filter(i => i.status==='close').length;
+          if (ready) return `<span style="color:var(--green);font-weight:700">${ready} ✅</span>`;
+          if (close) return `<span style="color:var(--gold);font-weight:700">${close} 🟡</span>`;
+          return `<span style="color:var(--text3)">—</span>`;
+        };
+
+        const actionable = pItems.filter(i => i.status==='ready'||i.status==='close'||i.status==='mid');
+        actionable.sort((a,b)=>(b.pct??0)-(a.pct??0));
+        const pTop = actionable[0];
+        const nextLabel = pTop
+          ? `${pTop.label.split(' — ')[1]} (${pTop.pct}%)`
+          : '—';
+
+        h += `<tr>
+          <td style="font-weight:600">${p.name}</td>
+          <td style="text-align:center">${summary('Atleti M')}</td>
+          <td style="text-align:center">${summary('Atleti F')}</td>
+          <td style="text-align:center">${summary('Allenatori')}</td>
+          <td style="font-family:var(--mono);font-size:10px">${nextLabel}</td>
+        </tr>`;
+      });
+
+      h += `</tbody></table></div></div>`;
+    }
+  }
+
+  return h;
+}
+
+async function toggleProgressione(checked, targetPlayer) {
+  const existing = cardsData[targetPlayer] || {};
+  const data = {...existing, player_id: targetPlayer, enabled: checked, updated_at: new Date().toISOString()};
+  try {
+    await sb('italy_cards?on_conflict=player_id', {
+      method:'POST', body:JSON.stringify(data),
+      prefer:'resolution=merge-duplicates,return=representation'
+    });
+    cardsData[targetPlayer] = data;
+    // Re-render solo la sezione progressione
+    const wrap = document.getElementById('prog-wrap');
+    if (wrap) wrap.innerHTML = renderProgressioneCard(targetPlayer);
+  } catch(e) { console.error('Toggle progressione error:', e); }
+}
+
+async function updateCardCount(cardKey, targetPlayer, value) {
+  const existing = cardsData[targetPlayer] || {};
+  const col = 'cards_' + cardKey;
+  const data = {...existing, player_id: targetPlayer, [col]: parseInt(value)||0, updated_at: new Date().toISOString()};
+  try {
+    await sb('italy_cards?on_conflict=player_id', {
+      method:'POST', body:JSON.stringify(data),
+      prefer:'resolution=merge-duplicates,return=representation'
+    });
+    cardsData[targetPlayer] = data;
+    // Aggiorna solo il consiglio principale senza re-render completo
+    const wrap = document.getElementById('prog-wrap');
+    if (wrap) wrap.innerHTML = renderProgressioneCard(targetPlayer);
+  } catch(e) { console.error('Update card count error:', e); }
 }
 
 // ── EXPORT MY DATA ───────────────────────────────────────────
