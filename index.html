@@ -2100,14 +2100,17 @@ function renderInventarioTab() {
   h += `<div id="prog-wrap">${renderProgressioneCard(targetPlayer)}</div>`;
 
   // BOTTONE EXPORT
-  h += `<div style="margin-bottom:20px;padding:14px 18px;background:var(--bg2);border-radius:var(--radius2);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-    <div>
-      <div style="font-size:13px;font-weight:700;margin-bottom:3px">📤 Esporta i miei dati</div>
-      <div style="font-size:11px;color:var(--text3)">Copia il JSON con tutto l'inventario di <strong>${targetName}</strong> negli appunti — pronto da incollare a Claude per l'analisi.</div>
+  h += `<div style="margin-bottom:20px;padding:14px 18px;background:var(--bg2);border-radius:var(--radius2);box-shadow:var(--shadow)">
+    <div style="font-size:13px;font-weight:700;margin-bottom:3px">📤 ${lang==='it'?'Esporta i miei dati':'Export my data'}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${lang==='it'?`Esporta l'inventario completo di <strong>${targetName}</strong> in formato JSON.`:`Export the full inventory of <strong>${targetName}</strong> as JSON.`}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="exportMyData('clipboard')" style="padding:8px 16px;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;border:none;border-radius:var(--radius);background:var(--royal);color:#fff;-webkit-appearance:none">
+        📋 ${lang==='it'?'Copia negli appunti':'Copy to clipboard'}
+      </button>
+      <button onclick="exportMyData('download')" style="padding:8px 16px;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);-webkit-appearance:none">
+        💾 ${lang==='it'?'Scarica file JSON':'Download JSON file'}
+      </button>
     </div>
-    <button onclick="exportMyData()" style="flex-shrink:0;padding:9px 20px;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;border:none;border-radius:var(--radius);background:var(--gold);color:#fff;transition:all .15s;-webkit-appearance:none">
-      📤 Esporta JSON
-    </button>
   </div>`;
 
   document.getElementById('inventario-content').innerHTML = h;
@@ -2748,7 +2751,7 @@ async function updateCardCount(cardKey, targetPlayer, value) {
 }
 
 // ── EXPORT MY DATA ───────────────────────────────────────────
-function exportMyData() {
+function exportMyData(mode) {
   const targetPlayer = isAdmin && adminActingAs ? adminActingAs : currentUser.id;
   const inv = inventoryData[targetPlayer] || {};
 
@@ -2820,17 +2823,26 @@ function exportMyData() {
   };
 
   const json = JSON.stringify(out, null, 2);
-  // Copia negli appunti e offri download
-  navigator.clipboard.writeText(json).then(() => {
-    alert('✅ Dati di ' + targetPlayer + ' copiati negli appunti!\n\nPuoi incollarli direttamente a Claude per l\'analisi.');
-  }).catch(() => {
-    // Fallback: download file
+
+  if (mode === 'download') {
     const blob = new Blob([json], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = targetPlayer + '_inventory.json';
     a.click(); URL.revokeObjectURL(url);
-  });
+  } else {
+    // clipboard (default)
+    navigator.clipboard.writeText(json).then(() => {
+      alert('✅ Dati di ' + targetPlayer + ' copiati negli appunti!');
+    }).catch(() => {
+      // Fallback download se clipboard non disponibile
+      const blob = new Blob([json], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = targetPlayer + '_inventory.json';
+      a.click(); URL.revokeObjectURL(url);
+    });
+  }
 }
 
 // ── START ─────────────────────────────────────────────────────
