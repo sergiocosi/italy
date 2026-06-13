@@ -2095,6 +2095,17 @@ function renderInventarioTab() {
   });
   h += collCard('gearf', '👕', lang==='it'?'Attrezzatura — Donne':'Equipment — Women', gearFHTML, 'gearf');
 
+  // BOTTONE EXPORT
+  h += `<div style="margin-bottom:20px;padding:14px 18px;background:var(--bg2);border-radius:var(--radius2);box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px">📤 Esporta i miei dati</div>
+      <div style="font-size:11px;color:var(--text3)">Copia il JSON con tutto l'inventario di <strong>${targetName}</strong> negli appunti — pronto da incollare a Claude per l'analisi.</div>
+    </div>
+    <button onclick="exportMyData()" style="flex-shrink:0;padding:9px 20px;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;border:none;border-radius:var(--radius);background:var(--gold);color:#fff;transition:all .15s;-webkit-appearance:none">
+      📤 Esporta JSON
+    </button>
+  </div>`;
+
   document.getElementById('inventario-content').innerHTML = h;
 }
 
@@ -2485,6 +2496,92 @@ function cancelEditScambio() {
   document.getElementById('sc-nome').value = '';
   document.getElementById('sc-note').value = '';
   onScambiFormChange();
+}
+
+// ── EXPORT MY DATA ───────────────────────────────────────────
+function exportMyData() {
+  const targetPlayer = isAdmin && adminActingAs ? adminActingAs : currentUser.id;
+  const inv = inventoryData[targetPlayer] || {};
+
+  const groups = ['sr','mr','lr','h','j','t'];
+  const groupLabel = {sr:'SR',mr:'MR',lr:'LR',h:'H',j:'J',t:'T'};
+
+  // Allenatori
+  const allenatori = {};
+  groups.forEach(g => {
+    allenatori[groupLabel[g]] = {
+      livello: inv['coach_'+g+'_level'] ?? null,
+      valore:  inv['coach_'+g+'_value'] ?? null,
+    };
+  });
+
+  // Atleti M
+  const atleti_m = { dec: { livello: inv['athlete_m_dec_level'] ?? null, valore: inv['athlete_m_dec_value'] ?? null } };
+  groups.forEach(g => {
+    atleti_m[groupLabel[g]] = {
+      livello: inv['athlete_m_'+g+'_level'] ?? null,
+      valore:  inv['athlete_m_'+g+'_value'] ?? null,
+    };
+  });
+
+  // Atleti F
+  const atleti_f = { hep: { livello: inv['athlete_f_hep_level'] ?? null, valore: inv['athlete_f_hep_value'] ?? null } };
+  groups.forEach(g => {
+    atleti_f[groupLabel[g]] = {
+      livello: inv['athlete_f_'+g+'_level'] ?? null,
+      valore:  inv['athlete_f_'+g+'_value'] ?? null,
+    };
+  });
+
+  // Centro M + F
+  const centro_m = {}, centro_f = {};
+  DISC_KEYS.forEach(dk => {
+    centro_m[dk] = { livello: inv['center_m_'+dk+'_level'] ?? null, valore: inv['center_m_'+dk+'_value'] ?? null };
+    centro_f[dk] = { livello: inv['center_f_'+dk+'_level'] ?? null, valore: inv['center_f_'+dk+'_value'] ?? null };
+  });
+
+  // Attrezzatura M + F
+  const gear = {M:{}, F:{}};
+  ['jersey','shorts','shoes'].forEach(piece => {
+    ['M','F'].forEach(sex => {
+      const sexKey = sex.toLowerCase();
+      gear[sex][piece] = {};
+      DISC_KEYS.forEach(dk => {
+        const col = piece+'_'+sexKey+'_'+dk;
+        const color = GEAR_CARD_COLOR[piece+'_'+dk] || null;
+        gear[sex][piece][dk] = {
+          livello: inv[col+'_level'] ?? null,
+          valore:  inv[col+'_value'] ?? null,
+          colore:  color,
+        };
+      });
+    });
+  });
+
+  const out = {
+    giocatore: targetPlayer,
+    esportato: new Date().toLocaleString('it-IT'),
+    allenatori,
+    atleti_m,
+    atleti_f,
+    centro_m,
+    centro_f,
+    attrezzatura_m: gear.M,
+    attrezzatura_f: gear.F,
+  };
+
+  const json = JSON.stringify(out, null, 2);
+  // Copia negli appunti e offri download
+  navigator.clipboard.writeText(json).then(() => {
+    alert('✅ Dati di ' + targetPlayer + ' copiati negli appunti!\n\nPuoi incollarli direttamente a Claude per l\'analisi.');
+  }).catch(() => {
+    // Fallback: download file
+    const blob = new Blob([json], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = targetPlayer + '_inventory.json';
+    a.click(); URL.revokeObjectURL(url);
+  });
 }
 
 // ── START ─────────────────────────────────────────────────────
