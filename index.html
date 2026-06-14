@@ -2035,6 +2035,28 @@ function renderInventarioTab() {
     </div>`;
   }
 
+  // 0. RISORSE
+  const risorseItems = [
+    { key: 'monete', label: lang==='it' ? '🪙 Monete'        : '🪙 Coins'         },
+    { key: 'gemme',  label: lang==='it' ? '💎 Gemme'         : '💎 Gems'          },
+    { key: 'ac',     label: lang==='it' ? '⚡ Action Points' : '⚡ Action Points' },
+    { key: 'ct',     label: lang==='it' ? '🎫 Card Token'    : '🎫 Card Token'    },
+  ];
+  let risorseHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:4px 0">`;
+  risorseItems.forEach(({key, label}) => {
+    const val = inv[key] != null ? inv[key] : '';
+    risorseHTML += `<div class="inv-pair">
+      <div class="inv-pair-label">${label}</div>
+      <div class="inv-pair-inputs">
+        <input type="number" id="inv_risorsa_${key}" min="0" step="1" value="${val}"
+          placeholder="0"
+          style="width:100%;max-width:140px;padding:6px 10px;font-size:14px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg1);color:var(--text1);font-family:var(--font);text-align:right">
+      </div>
+    </div>`;
+  });
+  risorseHTML += '</div>';
+  h += collCard('risorse', '💰', lang==='it' ? 'Risorse' : 'Resources', risorseHTML, 'risorse');
+
   // 1. ALLENATORI
   let coachHTML = `<div class="inv-grid">`;
   INV_GROUPS.forEach(g => {
@@ -2124,6 +2146,7 @@ function setInvAdminPlayer() {
 
 // ── INVENTORY SAVE ───────────────────────────────────────────
 const INV_SECTION_KEYS = {
+  risorse: ['monete','gemme','ac','ct'],
   coach: ['sr','mr','lr','h','j','t'].flatMap(g=>['coach_'+g+'_level','coach_'+g+'_value']),
   athlm: ['dec','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_m_'+g+'_level','athlete_m_'+g+'_value']),
   athlf: ['hep','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_f_'+g+'_level','athlete_f_'+g+'_value']),
@@ -2140,7 +2163,9 @@ async function saveInventory(section, targetPlayer) {
   const data = {...existing, player_id: targetPlayer, updated_at: new Date().toISOString()};
 
   keys.forEach(k => {
-    const el = document.getElementById('inv_'+k);
+    // Le risorse usano id "inv_risorsa_${k}", le altre sezioni "inv_${k}"
+    const elId = section === 'risorse' ? 'inv_risorsa_'+k : 'inv_'+k;
+    const el = document.getElementById(elId);
     if(!el) return;
     const val = el.value.trim();
     data[k] = val !== '' ? parseInt(val) : null;
