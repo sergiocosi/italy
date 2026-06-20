@@ -809,11 +809,14 @@ function renderOblSummary(){
         ? `<td rowspan="${grp.discs.length}" style="font-weight:700;text-align:center;vertical-align:middle;font-family:var(--mono);font-size:10px;color:var(--royal);background:var(--royallt);border-radius:4px">${grp.code}</td>`
         : '';
 
-      // Admin: chi sarebbe il migliore tra i ps secondo lo score corretto k=2?
-      let bestCorrettoId=null;
+      // Admin: chi sarebbe il migliore TRA i giocatori assegnati (ps) secondo il rank attuale
+      // e secondo lo score corretto k=2? Se sono persone diverse, segnalo l'inversione.
+      let bestAttualeId=null, bestCorrettoId=null;
       if(isAdmin && ps.length>=2){
-        let bestSc=-1;
+        let bestRank=Infinity, bestSc=-1;
         ps.forEach(p=>{
+          const r=getRank(p.id,d);
+          if(r!=null && r<bestRank){bestRank=r;bestAttualeId=p.id;}
           const sc=getScoreCorretto(p.id,d);
           if(sc!=null && sc>bestSc){bestSc=sc;bestCorrettoId=p.id;}
         });
@@ -824,10 +827,10 @@ function renderOblSummary(){
         if(!p) return `<td></td>`;
         const rank=getRank(p.id,d);
         const topBadge=p.isTop?` <span style="font-size:8px;color:var(--gold);font-weight:700">★</span>`:'';
-        const isBestAttuale = rank===1;
+        const isBestAttuale = isAdmin && bestAttualeId===p.id;
         const isBestCorretto = isAdmin && bestCorrettoId===p.id;
-        const diverge = isAdmin && bestCorrettoId && isBestAttuale && !isBestCorretto;
-        const corrFlag = diverge ? ` <span style="font-size:9px;color:var(--gold)" title="Con score corretto (k=${K_COACH}) il migliore sarebbe ${bestCorrettoId}">🔬⚠</span>` : '';
+        const diverge = isAdmin && bestAttualeId && bestCorrettoId && isBestAttuale && !isBestCorretto;
+        const corrFlag = diverge ? ` <span style="font-size:9px;color:var(--gold)" title="Con score corretto (k=${K_COACH}) il migliore tra questi sarebbe ${bestCorrettoId}">🔬⚠</span>` : '';
         return `<td style="white-space:nowrap">
           <span style="font-weight:600;font-size:11px">${p.id}</span>${topBadge}${corrFlag}
           ${rank?`<span class="rp ${rClass(rank)}" style="width:18px;height:16px;line-height:16px;font-size:9px">${rank}</span>`:''}
