@@ -1,6 +1,6 @@
 # 🦅 Italy Team CC — Ottimizzatore
 
-Web app per la gestione settimanale del Campionato per Club (CC) in Athletics Championship.
+Web app per la gestione settimanale del Campionato per Club (CC) in Athletics Championship, per il club **Italy Team**.
 
 **Link:** `https://sergiocosi.github.io/italy`
 
@@ -8,92 +8,76 @@ Web app per la gestione settimanale del Campionato per Club (CC) in Athletics Ch
 
 ## Cosa fa
 
-- Suggerisce le **discipline libere ottimali** per ogni giocatore, massimizzando i punti stimati del club
-- Compone le **6 griglie staffetta** (4×100 e 4×400) con metodo serpentino, top-heavy o bilanciato ottimale
-- Genera il **messaggio pronto** da copiare su WhatsApp/Telegram con staffette e libere
-- Mostra la **copertura discipline** e il ranking completo della squadra
+- **Inventario**: ogni giocatore inserisce e mantiene aggiornati atleti, allenatori, centri di allenamento, attrezzatura (maglia/pantaloncini/scarpe per disciplina) e risorse (monete, gemme, AC, CT)
+- **Dati CC**: inserimento settimanale di Valore CC per disciplina, Allenatore per gruppo (in comodo doppione rispetto all'Inventario) e discipline obbligatorie del giorno
+- Calcola il **ranking** per disciplina e suggerisce le **discipline libere ottimali** per ogni giocatore
+- Compone le **griglie staffetta** (4×100 e 4×400) con metodo equilibrato, top-heavy o bilanciato ottimale, con possibilità di override manuale da parte dell'admin
+- Genera il **messaggio del giorno** pronto da copiare su WhatsApp/Telegram, con staffette e libere consigliate
+- **Trofei**: tracking dei Personal Best per tutte le 19 discipline (bozza personale + snapshot settimanale pubblicato dall'admin)
+- **Scambi**: bacheca per scambio carte tra membri del club
+- Link rapido al **DC Coach Tracker** (`https://sergiocosi.github.io/dctracker/`), tool collegato per l'analisi dei match Daily Challenge
+
+L'app non ha più dati statici da modificare nel codice: tutto viene inserito dagli utenti tramite l'interfaccia e salvato su Supabase.
 
 ---
 
-## Aggiornamento settimanale
+## Architettura
 
-Il venerdì, dopo aver ricevuto i nuovi dati di attrezzatura, aggiorna il file `index.html`.
+- **Frontend**: singolo file `index.html` (vanilla HTML/CSS/JS), nessuna build, hostato su GitHub Pages
+- **Backend**: Supabase (stesso progetto condiviso con il DC Coach Tracker)
+- **Autenticazione**: selezione nome giocatore + password; sessione persistita in `localStorage`. L'admin può agire per conto di qualsiasi giocatore tramite selettore dedicato in ogni sezione
 
-Apri il file e cerca il blocco tra questi due commenti:
+### Tabelle Supabase
 
-```
-// ============================================================
-// DATA — aggiorna questo blocco ogni settimana
-// ============================================================
-```
+| Tabella | Contenuto |
+|---|---|
+| `italy_players` | Elenco giocatori del club |
+| `italy_weeks` | Settimane CC (una riga attiva alla volta) |
+| `italy_inventory` | Inventario per giocatore: atleti, allenatori, centri, attrezzatura, risorse (~348 colonne) |
+| `italy_rankings` | Rank CC per disciplina e valori allenatore per gruppo, per settimana |
+| `italy_obbligatorie` | Discipline obbligatorie assegnate per giorno/giocatore |
+| `italy_cards` | Progressione carte per gli upgrade (tab Progressione) |
+| `italy_scambi` | Inserzioni della bacheca scambi |
+| `italy_trofei` | Snapshot settimanali pubblicati di trofei e PB |
+| `italy_pb_drafts` | Bozze personali di PB, aggiornabili liberamente |
+| `italy_messaggi` | Messaggi del giorno pubblicati dall'admin |
 
-```
-// ============================================================
-// END DATA
-// ============================================================
-```
-
-### Cosa aggiornare
-
-| Variabile | Cosa contiene | Quando cambia |
-|-----------|--------------|---------------|
-| `WEEK_LABEL` | Etichetta settimana (es. "CC Diamond AA — Settimana 1") | Ogni settimana |
-| `LEAGUE_LABEL` | Nome lega per il badge header (es. "DIAMOND AA") | Solo se cambia lega |
-| `RANKS` | Rank CC per ogni giocatore in ogni disciplina | Ogni settimana |
-| `PB` | Trofei e PB 100m/400m di ogni giocatore | Quando cambia |
-| `OBL` | Obbligatorie per ogni giorno (1=Lun, 2=Mar, 3=Mer, 4=Gio) | Ogni settimana |
-| `TOP_NAMES` | Set dei giocatori "TOP" (ricevono indicazioni personalizzate) | Raramente |
-
-### Come caricare il file aggiornato su GitHub
-
-1. Apri la repo su github.com/[tuonome]/italy
-2. Clicca su `index.html`
-3. Clicca l'icona matita (Edit) in alto a destra
-4. Oppure: trascina il nuovo file sulla repo — GitHub chiede se sovrascrivere, conferma
-5. Scrivi un messaggio di commit tipo "Aggiornamento settimana X" e clicca **Commit changes**
-6. Dopo circa 1 minuto il sito è aggiornato
+Tutte le tabelle hanno RLS attiva: lettura pubblica, scrittura autenticata via anon key.
 
 ---
 
-## Struttura dei dati
+## Aggiornamento del database
 
-### RANKS
-Oggetto `{ NomeGiocatore: [rank1, rank2, ..., rank19] }` — un valore per ognuna delle 19 discipline nell'ordine:
-`100m, 200m, 400m, 800m, 1500m, 5000m, 10000m, Marathon, 110H, 400H, 3000S, LJ, TJ, HJ, PV, SP, DT, HT, JT`
+Non c'è più un blocco dati da editare nel file: l'aggiornamento settimanale avviene **dagli utenti, dentro l'app**:
 
-Il rank è la posizione nella classifica CC di quella settimana (1 = primo). `null` = giocatore non classificato.
+1. Ogni giocatore inserisce Valore CC, Allenatore e discipline obbligatorie nel tab **Dati CC** (o nell'Inventario per atleti/centri/attrezzatura)
+2. L'admin, dal tab **Giorno CC**, genera e pubblica il messaggio con staffette e libere
+3. L'admin può intervenire per conto di qualsiasi giocatore tramite il selettore admin presente in ogni sezione
 
-### OBL
-Oggetto con 4 chiavi (1, 2, 3, 4 per i giorni). Ogni giorno è `{ NomeGiocatore: ["disc1", "disc2"] }`.
-
-I nomi dei giocatori devono corrispondere esattamente a quelli in `RANKS`.
-
-### TOP_NAMES
-Set JavaScript con i nomi dei giocatori che ricevono indicazioni personalizzate sulle libere. Di solito i 6-8 giocatori con rank mediamente più alto.
+Per interventi diretti sul database (correzioni, import massivi, manutenzione), si opera via SQL su Supabase.
 
 ---
 
-## Logica dell'algoritmo
+## Deploy
 
-Le libere vengono assegnate con un algoritmo **greedy a guadagno marginale**: ad ogni passo assegna la combinazione (giocatore, disciplina) che porta il maggior incremento di punti stimati rispetto alla situazione corrente. Il sistema di punteggio usato è quello reale del CC: 120 punti al 1°, 116 al 2°, 112 al 3°, poi -4 per ogni posizione.
+Il sito è statico: ogni modifica a `index.html` va semplicemente caricata su GitHub.
+
+1. Apri la repo su `github.com/sergiocosi/italy`
+2. Sostituisci `index.html` (upload diretto, o tramite l'editor di GitHub)
+3. Commit changes
+4. Dopo circa un minuto GitHub Pages pubblica la nuova versione
 
 ---
 
-## Aggiornamento tramite Claude
+## Logica dell'algoritmo staffette/libere
 
-Ogni settimana puoi caricare i file Excel aggiornati direttamente su Claude con il messaggio:
+Le libere vengono assegnate con un algoritmo a tre fasi: greedy sui giocatori TOP, poi greedy sui restanti, poi una passata di copertura per le discipline ancora scoperte. Il sistema di punteggio è quello reale del CC: 120 punti al 1°, 116 al 2°, 112 al 3°, poi -4 per ogni posizione successiva.
 
-> **"Italy Team CC, settimana nuova"** + allega i tre file Excel
-
-Claude genera automaticamente il nuovo `index.html` con tutti i dati aggiornati.
-
-File necessari:
-- `CC_potenziale_[...].xlsx` — rank CC attrezzatura
-- `ClubItalyTeam.xlsx` — PB e trofei
-- `obbligatorieCC_tot.xlsx` — obbligatorie della settimana
+Le griglie staffetta possono essere generate in tre modalità (equilibrate, top-heavy, bilanciato ottimale) e l'admin può sempre sovrascriverle manualmente con drag-and-drop; l'override viene mantenuto e riflesso nel messaggio pubblicato.
 
 ---
 
 ## Note
 
-- Il file funziona completamente **offline** una volta caricato, ma richiede HTTPS per funzionare su iOS Safari (quindi usare sempre il link GitHub Pages, non il file locale)
+- Il file funziona offline una volta caricato, ma richiede HTTPS per funzionare su iOS Safari — usare sempre il link GitHub Pages, non il file locale
+- Per la guida d'uso pensata per i membri del club, vedi il tab **Guida** dentro l'app stessa
