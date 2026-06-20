@@ -688,6 +688,39 @@ function getRank(playerId, disc) {
 function rClass(r){if(!r||r>23)return 'r4';if(r<=3)return 'r1';if(r<=6)return 'r2';if(r<=10)return 'r3';return 'r4';}
 function rPill(p,d){const r=getRank(p,d);return `<span class="rp ${rClass(r)}">${r||'—'}</span>`;}
 
+// ── SCORE CORRETTO (admin-only, sperimentale) ──────────────────────────
+// Stima: il coach pesa ~2-3x un punto di Valore CC (analisi DC Tracker su
+// migliaia di coppie comparabili nel decathlon). K_COACH è il moltiplicatore
+// usato per "what-if": Score corretto = Valore CC + K_COACH × Allenatore.
+// Non sostituisce getScore() in nessun calcolo esistente: è una vista parallela
+// solo per confronto admin, finché non si decide se adottarla.
+const K_COACH = 2;
+
+function getScoreCorretto(playerId, disc, k=K_COACH) {
+  const r = rankings[playerId];
+  if (!r) return null;
+  const grp = GRP[disc].toLowerCase();
+  const gearCol = DISC_TO_GEAR_COL[disc];
+  const valoreCC = r[gearCol] || 0;
+  const coach = r[`coach_${grp}`] || 0;
+  if (valoreCC === 0 && coach === 0) return null;
+  return valoreCC + k * coach;
+}
+
+function getRankForDiscCorretto(disc, k=K_COACH) {
+  const scores = allPlayers
+    .map(p => ({player:p.id, score:getScoreCorretto(p.id, disc, k)}))
+    .filter(x => x.score!=null)
+    .sort((a,b) => b.score-a.score);
+  const rankMap = {};
+  scores.forEach((x,i) => { rankMap[x.player] = i+1; });
+  return rankMap;
+}
+
+function getRankCorretto(playerId, disc, k=K_COACH) {
+  return getRankForDiscCorretto(disc, k)[playerId] || null;
+}
+
 // ── TABS ─────────────────────────────────────────────────────
 function showTab(t){
   ['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','scambi','guida'].forEach(n=>{
@@ -776,13 +809,27 @@ function renderOblSummary(){
         ? `<td rowspan="${grp.discs.length}" style="font-weight:700;text-align:center;vertical-align:middle;font-family:var(--mono);font-size:10px;color:var(--royal);background:var(--royallt);border-radius:4px">${grp.code}</td>`
         : '';
 
+      // Admin: chi sarebbe il migliore tra i ps secondo lo score corretto k=2?
+      let bestCorrettoId=null;
+      if(isAdmin && ps.length>=2){
+        let bestSc=-1;
+        ps.forEach(p=>{
+          const sc=getScoreCorretto(p.id,d);
+          if(sc!=null && sc>bestSc){bestSc=sc;bestCorrettoId=p.id;}
+        });
+      }
+
       const playerCells=Array.from({length:cols},(_,i)=>{
         const p=ps[i];
         if(!p) return `<td></td>`;
         const rank=getRank(p.id,d);
         const topBadge=p.isTop?` <span style="font-size:8px;color:var(--gold);font-weight:700">★</span>`:'';
+        const isBestAttuale = rank===1;
+        const isBestCorretto = isAdmin && bestCorrettoId===p.id;
+        const diverge = isAdmin && bestCorrettoId && isBestAttuale && !isBestCorretto;
+        const corrFlag = diverge ? ` <span style="font-size:9px;color:var(--gold)" title="Con score corretto (k=${K_COACH}) il migliore sarebbe ${bestCorrettoId}">🔬⚠</span>` : '';
         return `<td style="white-space:nowrap">
-          <span style="font-weight:600;font-size:11px">${p.id}</span>${topBadge}
+          <span style="font-weight:600;font-size:11px">${p.id}</span>${topBadge}${corrFlag}
           ${rank?`<span class="rp ${rClass(rank)}" style="width:18px;height:16px;line-height:16px;font-size:9px">${rank}</span>`:''}
         </td>`;
       }).join('');
@@ -797,6 +844,9 @@ function renderOblSummary(){
   });
 
   h+=`</tbody></table>`;
+  if(isAdmin){
+    h+=`<p style="font-size:11px;color:var(--text3);margin-top:8px">🔬⚠ = con lo score corretto (k=${K_COACH}, sperimentale) il migliore per quella disciplina sarebbe un altro giocatore tra quelli assegnati.</p>`;
+  }
   document.getElementById('obl-summary').innerHTML=h;
 }
 
@@ -1120,6 +1170,39 @@ function buildSquads(disc,mode){
   return squads;
 }
 
+// Admin-only, sperimentale: stessa identica logica di buildSquads, ma usando
+// getScoreCorretto (Valore CC + K_COACH × Allenatore) invece di getScore.
+// Serve solo per confronto "what-if", non viene mai usata per le griglie reali.
+function buildSquadsCorretto(disc,mode,k=K_COACH){
+  const players=allPlayers.filter(p=>p.active!==false);
+  const ranked=players.map(p=>({p:p.id,r:getScoreCorretto(p.id,disc,k)||0})).filter(x=>x.r>0).sort((a,b)=>b.r-a.r);
+  const squads={A:[],B:[],C:[],D:ranked.slice(12,16).map(x=>x.p)};
+  const pool=ranked.slice(0,12);
+  if(mode==='ottimizzato'){
+    const sums={A:0,B:0,C:0};
+    for(const{p,r}of pool){const kk=['A','B','C'].reduce((a,b)=>sums[a]<=sums[b]?a:b);squads[kk].push(p);sums[kk]+=r;}
+  }else if(mode==='topheavy'){
+    squads.A=pool.slice(0,4).map(x=>x.p);
+    const rest=pool.slice(4);
+    const o=[['B','C'],['C','B'],['B','C'],['C','B']];
+    for(let i=0;i<rest.length;i++)squads[o[Math.floor(i/2)][i%2]].push(rest[i].p);
+  }else{
+    const o=[['A','B','C'],['C','B','A'],['A','B','C'],['C','B','A']];
+    for(let r=0;r<4;r++)for(let j=0;j<3;j++){const idx=r*3+j;if(idx<pool.length)squads[o[r][j]].push(pool[idx].p);}
+  }
+  const used=new Set([...squads.A,...squads.B,...squads.C,...squads.D]);
+  const free=ranked.filter(x=>!used.has(x.p)).map(x=>x.p);
+  squads.E=free.slice(0,4);squads.F=free.slice(4);
+  return squads;
+}
+
+// Ritorna {playerId: 'A'|'B'|'C'|'D'|'E'|'F'} per sapere in quale squadra finisce ognuno
+function squadOf(squads){
+  const m={};
+  for(const k of['A','B','C','D','E','F']) (squads[k]||[]).forEach(p=>m[p]=k);
+  return m;
+}
+
 function renderStaffette(){
   let h='';
   for(const disc of['100m','400m']){
@@ -1127,6 +1210,13 @@ function renderStaffette(){
     const editMode=!!staffEditMode[disc];
     const hasOverride=!!staffOverride[disc];
     const baseSquads=buildSquads(disc,staffMode); // per confronto badge modificato
+
+    // Admin: composizione "what-if" con score corretto (k=2), solo per confronto, mai usata per le griglie reali
+    let squadOfCorretto=null;
+    if(isAdmin){
+      const squadsCorretto=buildSquadsCorretto(disc,staffMode);
+      squadOfCorretto=squadOf(squadsCorretto);
+    }
 
     h+=`<div class="card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -1168,19 +1258,31 @@ function renderStaffette(){
           <span class="squad-stats">Σ${sum.toLocaleString()}</span>
         </div>`;
       m.forEach((p,i)=>{
+        let corrFlag='';
+        if(isAdmin && squadOfCorretto){
+          const correctedSquad=squadOfCorretto[p];
+          const pointsNow=['A','B','C','D'].includes(k);
+          const pointsCorretto=correctedSquad && ['A','B','C','D'].includes(correctedSquad);
+          if(correctedSquad && correctedSquad!==k && pointsNow!==pointsCorretto){
+            corrFlag=` <span style="font-size:9px;color:var(--gold)" title="Con score corretto (k=${K_COACH}) andrebbe in griglia ${correctedSquad}">🔬⚠</span>`;
+          }
+        }
         h+=`<div class="runner${editMode?' draggable':''}" ${editMode?`draggable="true"
           ondragstart="dragStartRunner(event,'${disc}','${k}','${p}')"
           ondragend="this.classList.remove('dragging')"
           ondragover="event.preventDefault();event.stopPropagation()"
           ondrop="event.stopPropagation();dropRunner(event,'${disc}','${k}');document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'))"`:''}>
           <span class="rnum">${i+1}</span>
-          <span class="pname">${p}</span>
+          <span class="pname">${p}</span>${corrFlag}
           <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3)">${(getScore(p,disc)||0).toLocaleString()} ${rPill(p,disc)}</span>
         </div>`;
       });
       h+=`</div>`;
     });
     h+=`</div></div>`;
+  }
+  if(isAdmin){
+    h+=`<p style="font-size:11px;color:var(--text3);margin-top:4px">🔬⚠ = con lo score corretto (k=${K_COACH}, sperimentale, basato sull'analisi DC Tracker) questo atleta passerebbe da una griglia che fa punti a una libera, o viceversa.</p>`;
   }
   document.getElementById('staffette-content').innerHTML=h;
 }
@@ -1249,15 +1351,30 @@ function renderRankingTable(){
   if(!disc){document.getElementById('ranking-table').innerHTML='';return;}
   const players=allPlayers.filter(p=>p.active!==false);
   const sorted=players.map(p=>({p,s:getScore(p.id,disc)})).filter(x=>x.s!=null&&x.s>0).sort((a,b)=>b.s-a.s);
-  let h=`<table><thead><tr><th>#</th><th>${t('player')}</th><th>${t('score_cc')}</th><th>Rank</th></tr></thead><tbody>`;
+
+  const corrCol = isAdmin ? `<th title="Sperimentale: Valore CC + ${K_COACH}× Allenatore">Score k=${K_COACH} 🔬</th><th title="Rank secondo lo score corretto">Rank k=${K_COACH}</th>` : '';
+  let h=`<table><thead><tr><th>#</th><th>${t('player')}</th><th>${t('score_cc')}</th><th>Rank</th>${corrCol}</tr></thead><tbody>`;
   sorted.forEach(({p,s},i)=>{
+    let corrCells='';
+    if(isAdmin){
+      const sc = getScoreCorretto(p.id, disc);
+      const rc = getRankCorretto(p.id, disc);
+      const rankAttuale = i+1;
+      const changed = rc!=null && rc!==rankAttuale;
+      corrCells = `<td style="font-family:var(--mono);color:var(--text2)">${sc!=null?sc.toLocaleString():'—'}</td>
+        <td><span class="rp ${rClass(rc)}" style="${changed?'box-shadow:0 0 0 2px var(--gold)':''}">${rc||'—'}</span>${changed?` <span style="font-size:9px;color:var(--gold)" title="Posizione diversa rispetto al ranking attuale">⚠</span>`:''}</td>`;
+    }
     h+=`<tr><td style="font-family:var(--mono);color:var(--text3)">${i+1}</td>
       <td style="font-weight:600">${p.id}${TOP_NAMES.has(p.id)?' <span class="badge b-top" style="font-size:9px">TOP</span>':''}</td>
       <td style="font-family:var(--mono)">${s.toLocaleString()}</td>
       <td><span class="rp ${rClass(i+1)}">${i+1}</span></td>
+      ${corrCells}
     </tr>`;
   });
   h+=`</tbody></table>`;
+  if(isAdmin){
+    h+=`<p style="font-size:11px;color:var(--text3);margin-top:8px">🔬 Score k=${K_COACH}: vista sperimentale, visibile solo agli admin. Valore CC + ${K_COACH}× Allenatore, basato sull'analisi DC Tracker. ⚠ = la posizione cambierebbe rispetto al ranking attuale.</p>`;
+  }
   document.getElementById('ranking-table').innerHTML=h;
 }
 
