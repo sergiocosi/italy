@@ -646,6 +646,7 @@ async function closeGuideModal() {
       });
     } catch(e) {
       console.error('Save guida_vista error:', e);
+      alert('Non sono riuscito a salvare la preferenza "non mostrare più": '+e.message+'\nRiprova, o segnalalo all\'admin.');
     }
   }
 }
