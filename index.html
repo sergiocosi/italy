@@ -639,16 +639,13 @@ async function checkShowGuideModal() {
 async function closeGuideModal() {
   document.getElementById('guide-modal-overlay').style.display='none';
   const dontShow = document.getElementById('guide-modal-dontshow').checked;
-  console.log('[GUIDA DEBUG] checkbox spuntata?', dontShow, '| currentUser.id =', currentUser ? currentUser.id : '(currentUser è null!)');
   if (dontShow) {
     try {
-      const result = await sb(`italy_players?id=eq.${currentUser.id}`, {
+      await sb(`italy_players?id=eq.${currentUser.id}`, {
         method:'PATCH', body:JSON.stringify({guida_vista:true})
       });
-      console.log('[GUIDA DEBUG] risposta PATCH:', result);
-      alert('Salvato! Risposta: '+JSON.stringify(result));
     } catch(e) {
-      console.error('[GUIDA DEBUG] Save guida_vista error:', e);
+      console.error('Save guida_vista error:', e);
       alert('Non sono riuscito a salvare la preferenza "non mostrare più": '+e.message+'\nRiprova, o segnalalo all\'admin.');
     }
   }
