@@ -244,15 +244,16 @@ select{font-size:16px}
 <div class="guide-modal-overlay" id="guide-modal-overlay" style="display:none">
   <div class="guide-modal-box">
     <div class="guide-modal-head">
-      <h3>👋 Benvenuto in Italy Team CC</h3>
+      <h3 id="guide-modal-title">👋 Benvenuto in Italy Team CC</h3>
+      <button onclick="toggleLang()" id="lang-toggle-modal" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;flex-shrink:0">🌐 EN</button>
     </div>
     <div class="guide-modal-body" id="guide-modal-body"></div>
     <div class="guide-modal-foot">
       <label class="guide-modal-checkbox">
         <input type="checkbox" id="guide-modal-dontshow">
-        Non mostrare più questa guida all'accesso
+        <span id="guide-modal-checkbox-label">Non mostrare più questa guida all'accesso</span>
       </label>
-      <button class="btn-primary-sm" onclick="closeGuideModal()">Ho capito, chiudi</button>
+      <button class="btn-primary-sm" onclick="closeGuideModal()" id="guide-modal-close-btn">Ho capito, chiudi</button>
     </div>
   </div>
 </div>
@@ -388,74 +389,7 @@ select{font-size:16px}
 
     <!-- TAB GUIDA -->
     <div id="tab-guida" style="display:none">
-      <div class="card">
-        <div class="card-title">Come usare questa app</div>
-
-        <div class="alert a-info" style="margin-bottom:18px;font-size:13px;line-height:1.5">
-          💡 <strong>In sintesi:</strong> gli unici dati davvero necessari al gioco sono <strong>Allenatore + Valore CC</strong> (tab Dati CC) e le <strong>Obbligatorie</strong>. Tutto il resto — Trofei, PB, Scambi — è utile per le statistiche del club ma non incide sul calcolo delle staffette.
-        </div>
-
-        <div class="guide-step">
-          <div class="guide-num">1</div>
-          <div class="guide-body">
-            <div class="guide-title">🔴 Obbligatorio — Inserisci Allenatore e Valore CC</div>
-            <p>Dal venerdì alla domenica, dopo aver ricevuto l'attrezzatura CC, vai nel tab <strong>Dati CC</strong> e inserisci il <strong>Valore CC</strong> per ogni disciplina e il valore <strong>Allenatore</strong> per ogni gruppo di discipline. Sono i due dati che servono per calcolare i rank della settimana e capire quali sono le libere più convenienti.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="guide-num">2</div>
-          <div class="guide-body">
-            <div class="guide-title">🔴 Obbligatorio — Inserisci le discipline obbligatorie</div>
-            <p>Il lunedì apri l'app e inserisci le due discipline obbligatorie assegnate dal gioco per ogni giornata del CC. Puoi inserirle nel tab <strong>Dati CC</strong>, sezione Obbligatorie. Salvale una volta sola — rimangono fino alla settimana successiva.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="guide-num">3</div>
-          <div class="guide-body">
-            <div class="guide-title">🔵 Facoltativo — Guarda il messaggio del giorno</div>
-            <p>L'admin genera il messaggio giornaliero con le staffette e le libere consigliate, nel tab <strong>Giorno CC</strong>. Una volta pubblicato lo trovi nel tab <strong>Messaggio</strong> e puoi copiarlo su WhatsApp/Telegram con un click. Comodo per non perdersi nulla, ma non serve inserire nulla qui.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="guide-num">4</div>
-          <div class="guide-body">
-            <div class="guide-title">🔵 Facoltativo — Trofei e Personal Best</div>
-            <p>Puoi aggiornare i tuoi <strong>trofei totali</strong> e i tuoi <strong>PB per disciplina</strong> (maschili e femminili) in qualsiasi momento, nel tab <strong>Trofei</strong> — i dati vengono salvati come bozza personale. Ogni settimana l'admin pubblica uno <strong>snapshot ufficiale</strong> che cristallizza i valori per il calcolo del trend e della classifica. I tempi si inseriscono nel formato <strong>10.45</strong> oppure <strong>1:45.23</strong> oppure <strong>2:10:45</strong> · le distanze in metri: <strong>7.23</strong>. Utile per le statistiche del club, ma non influenza le staffette.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="guide-num">5</div>
-          <div class="guide-body">
-            <div class="guide-title">🔵 Facoltativo — Scambi tra giocatori</div>
-            <p>Nel tab <strong>Scambi</strong> puoi pubblicare le carte che ti servono o che hai in più, e vedere le inserzioni degli altri membri del club. Utile per accelerare gli upgrade, ma non obbligatorio.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="guide-num">6</div>
-          <div class="guide-body">
-            <div class="guide-title">Come leggere i rank colorati</div>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">
-              <span><span class="rp r1">1</span> Top 3 — punti sicuri</span>
-              <span><span class="rp r2">5</span> Top 4-6 — competitivo</span>
-              <span><span class="rp r3">8</span> Top 7-10 — possibile</span>
-              <span><span class="rp r4">15</span> Oltre 10 — difficile</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="guide-step" style="border-bottom:none">
-          <div class="guide-num" style="background:var(--goldlt);color:var(--gold)">★</div>
-          <div class="guide-body">
-            <div class="guide-title">Password e accesso</div>
-            <p>Seleziona il tuo nome dalla lista e inserisci la tua password. Puoi cambiarla in qualsiasi momento dal tab <strong>Dati CC</strong>, in fondo alla pagina. L'admin può inserire e modificare dati per conto di qualsiasi giocatore selezionandolo dal menu in cima ad ogni sezione.</p>
-          </div>
-        </div>
-      </div>
+      <div class="card" id="guida-card-content"></div>
     </div>
 
   </div>
@@ -471,7 +405,7 @@ const GRP={'100m':'SR','200m':'SR','400m':'SR','800m':'MR','1500m':'MR','5000m':
 let lang='it';
 const I18N={it:{tab_giorno:'📅 Giorno CC',tab_msg:'📨 Messaggio',tab_staff:'🏃 Staffette',tab_rank:'📊 Ranking',tab_insert:'✏️ Dati CC',tab_inventario:'🎒 Inventario',tab_trofei:'🏆 Trofei',tab_scambi:'🔄 Scambi',tab_guide:'❓ Guida',day1:'Lunedì',day2:'Martedì',day3:'Mercoledì',day4:'Giovedì',obl_day:'Obbligatorie del giorno',calc_btn:'Calcola e genera messaggio →',msg_empty:'Vai al tab "Giorno CC" e premi Calcola.',trofei_title:'Trofei & Trend settimanale',trofei_player:'Giocatore',trofei_pts:'Trofei',trofei_trend:'Trend',trofei_100:'Ultimo 100m',trofei_400:'Ultimo 400m',trofei_insert:'Inserisci dati trofei (solo admin)',trofei_save:'Salva trofei',trofei_no_data:'Nessun dato disponibile.',logout:'Esci',loading:'Caricamento...',error_conn:'Errore di connessione. Riprova.',error_pwd:'Password errata o giocatore non trovato.',error_sel:'Seleziona il tuo nome e inserisci la password.',saved:'✓ Salvato!',error_save:'Errore nel salvataggio: ',no_week:'Nessuna settimana attiva trovata.',admin_for:'Stai inserendo dati per:',obl_title:'Obbligatorie della settimana',obl_desc:'Inserisci le discipline obbligatorie assegnate ogni giorno.',gear_title:'Atleta 🔥, Allenatore 💧 e Centro 🏟 per gruppo',gear_desc:'Inserisci i valori che vedi nel gioco. Aggiorna solo quando fai un upgrade.',athlete:'Atleta 🔥',coach:'Allenatore 💧',center:'Centro 🏟',valcc_title:'Valore CC per disciplina',valcc_desc:'Il valore mostrato dal gioco per ogni disciplina. Non includere l\'allenatore: lo aggiungi separatamente qui sotto. Si aggiorna dal venerdì alla domenica.',valcc_info:'💡 Ranking CC = Valore CC disciplina + Allenatore del gruppo',save_gear:'Salva allenatore',save_att:'Salva attrezzatura',mode_equil:'Equilibrate',mode_top:'Top-heavy',mode_bal:'Bilanciato ottimale',mode_desc_equil:'Equilibrate: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, poi Equilibrate B/C · D=13-16',mode_desc_bal:'Bilanciato ottimale: minimizza scarto Σscore tra le 3 griglie',relay:'Griglia',relay_note1:'punta a punti',relay_note4:'paracadute',relay_free:'libera',select_day:'Seleziona giorno',player:'Giocatore',level:'Livello',rank_by_disc:'Ranking per disciplina',score_cc:'Score CC',free1:'1ª libera',free2:'2ª libera',admin_mode:'Modalità admin — inserisci per',obl_label1:'Obbligatoria 1',obl_label2:'Obbligatoria 2',grp_sprint:'Sprint',grp_mid:'Media dist.',grp_long:'Lunga dist.',grp_hurdles:'Ostacoli',grp_jumps:'Salti',grp_throws:'Lanci',center_disc:'CENTRO 🏟 PER DISCIPLINA',not_pub:'Il messaggio per {DAY} non è ancora stato pubblicato dall\'admin. Controlla più tardi!',copy_msg:'📋 Copia messaggio completo',change_pwd:'🔐 Cambia password',pwd_desc:'Inserisci la password attuale e quella nuova.',pwd_old:'Password attuale',pwd_new:'Nuova password',pwd_confirm:'Conferma nuova',pwd_btn:'Cambia password',fifth_sixth:'Quinta e Sesta: scelta libera per i rimanenti.'},en:{tab_giorno:'📅 CC Day',tab_msg:'📨 Message',tab_staff:'🏃 Relays',tab_rank:'📊 Ranking',tab_insert:'✏️ CC Data',tab_inventario:'🎒 Inventory',tab_trofei:'🏆 Trophies',tab_scambi:'🔄 Trades',tab_guide:'❓ Guide',day1:'Monday',day2:'Tuesday',day3:'Wednesday',day4:'Thursday',obl_day:'Mandatory events of the day',calc_btn:'Calculate & generate message →',msg_empty:'Go to "CC Day" tab and press Calculate.',trofei_title:'Trophies & Weekly trend',trofei_player:'Player',trofei_pts:'Trophies',trofei_trend:'Trend',trofei_100:'Last 100m',trofei_400:'Last 400m',trofei_insert:'Insert trophies data (admin only)',trofei_save:'Save trophies',trofei_no_data:'No data available.',logout:'Logout',loading:'Loading...',error_conn:'Connection error. Please retry.',error_pwd:'Wrong password or player not found.',error_sel:'Select your name and enter the password.',saved:'✓ Saved!',error_save:'Save error: ',no_week:'No active week found.',admin_for:'Inserting data for:',obl_title:'Weekly mandatory events',obl_desc:'Enter the mandatory events assigned each day.',gear_title:'Athlete 🔥, Coach 💧 & Training Centre 🏟 by group',gear_desc:'Enter values from the game. Update only when you upgrade.',athlete:'Athlete 🔥',coach:'Coach 💧',center:'Centre 🏟',valcc_title:'CC Value by event',valcc_desc:'The value shown in the game for each event. Don\'t include the coach: add it separately below. Updates from Friday through Sunday.',valcc_info:'💡 CC Ranking = CC Value (event) + Coach (group)',save_gear:'Save coach',save_att:'Save equipment',mode_equil:'Balanced',mode_top:'Top-heavy',mode_bal:'Optimal balanced',mode_desc_equil:'Balanced: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, then Balanced B/C · D=13-16',mode_desc_bal:'Optimal balanced: minimizes score gap between the 3 relays',relay:'Relay',relay_note1:'scoring',relay_note4:'safety',relay_free:'free',select_day:'Select day',player:'Player',level:'Level',rank_by_disc:'Ranking by event',score_cc:'CC Score',free1:'1st free',free2:'2nd free',admin_mode:'Admin mode — insert for',obl_label1:'Mandatory 1',obl_label2:'Mandatory 2',grp_sprint:'Sprint',grp_mid:'Mid dist.',grp_long:'Long dist.',grp_hurdles:'Hurdles',grp_jumps:'Jumps',grp_throws:'Throws',center_disc:'TRAINING CENTRE 🏟 BY EVENT',not_pub:'The message for {DAY} has not been published by the admin yet. Check later!',copy_msg:'📋 Copy full message',change_pwd:'🔐 Change password',pwd_desc:'Enter your current password and the new one.',pwd_old:'Current password',pwd_new:'New password',pwd_confirm:'Confirm new',pwd_btn:'Change password',fifth_sixth:'5th & 6th: free choice for the rest.'}};
 function t(k){return(I18N[lang]||I18N.it)[k]||I18N.it[k]||k;}
-function toggleLang(){lang=lang==='it'?'en':'it';const btn=document.getElementById('lang-toggle');if(btn)btn.textContent=lang==='it'?'🌐 EN':'🌐 IT';refreshAllUI();}
+function toggleLang(){lang=lang==='it'?'en':'it';const btn=document.getElementById('lang-toggle');if(btn)btn.textContent=lang==='it'?'🌐 EN':'🌐 IT';const btnM=document.getElementById('lang-toggle-modal');if(btnM)btnM.textContent=lang==='it'?'🌐 EN':'🌐 IT';refreshAllUI();}
 function refreshAllUI(){
   document.querySelectorAll('.tab').forEach(el=>{
     const key=el.dataset.tabkey;
@@ -490,6 +424,13 @@ function refreshAllUI(){
   if(document.getElementById('tab-staffette').style.display!=='none')renderStaffette();
   if(document.getElementById('tab-ranking').style.display!=='none')renderRankingTable();
   if(document.getElementById('tab-trofei')&&document.getElementById('tab-trofei').style.display!=='none')renderTrofei();
+  if(document.getElementById('tab-guida')&&document.getElementById('tab-guida').style.display!=='none')document.getElementById('guida-card-content').innerHTML=renderGuidaContent();
+  if(document.getElementById('guide-modal-overlay')&&document.getElementById('guide-modal-overlay').style.display!=='none'){
+    document.getElementById('guide-modal-title').textContent = lang==='it' ? '👋 Benvenuto in Italy Team CC' : '👋 Welcome to Italy Team CC';
+    document.getElementById('guide-modal-body').innerHTML=renderGuidaContent();
+    document.getElementById('guide-modal-checkbox-label').textContent = lang==='it' ? 'Non mostrare più questa guida all\'accesso' : 'Don\'t show this guide on login again';
+    document.getElementById('guide-modal-close-btn').textContent = lang==='it' ? 'Ho capito, chiudi' : 'Got it, close';
+  }
 }
 function GRP_NAMES(k){const m={'SR':t('grp_sprint'),'MR':t('grp_mid'),'LR':t('grp_long'),'H':t('grp_hurdles'),'J':t('grp_jumps'),'T':t('grp_throws')};return m[k]||k;}
 // Gear column per disciplina nel DB
@@ -627,8 +568,10 @@ async function checkShowGuideModal() {
     const res = await sbGet('italy_players', `select=guida_vista&id=eq.${currentUser.id}`);
     const guidaVista = res && res[0] ? res[0].guida_vista : false;
     if (!guidaVista) {
-      document.getElementById('guide-modal-body').innerHTML =
-        document.getElementById('tab-guida').querySelector('.card').outerHTML;
+      document.getElementById('guide-modal-title').textContent = lang==='it' ? '👋 Benvenuto in Italy Team CC' : '👋 Welcome to Italy Team CC';
+      document.getElementById('guide-modal-body').innerHTML = renderGuidaContent();
+      document.getElementById('guide-modal-checkbox-label').textContent = lang==='it' ? 'Non mostrare più questa guida all\'accesso' : 'Don\'t show this guide on login again';
+      document.getElementById('guide-modal-close-btn').textContent = lang==='it' ? 'Ho capito, chiudi' : 'Got it, close';
       document.getElementById('guide-modal-overlay').style.display='flex';
     }
   } catch(e) {
@@ -798,6 +741,7 @@ function showTab(t){
   if(t==='inserisci') renderInsertTab();
   if(t==='inventario') renderInventarioTab();
   if(t==='scambi') renderScambiTab();
+  if(t==='guida') document.getElementById('guida-card-content').innerHTML=renderGuidaContent();
 }
 
 function setDay(d,btn){
@@ -818,6 +762,80 @@ function setStaffMode(m,btn){
 }
 
 // ── OBL SUMMARY ──────────────────────────────────────────────
+function renderGuidaContent(){
+  const it = lang==='it';
+  const STEPS = [
+    {
+      n:1, badge:'🔴', titleIt:'Obbligatorio — Inserisci Allenatore e Valore CC', titleEn:'Required — Enter Coach and CC Value',
+      bodyIt:'Dal venerdì alla domenica, dopo aver ricevuto l\'attrezzatura CC, vai nel tab <strong>Dati CC</strong> e inserisci il <strong>Valore CC</strong> per ogni disciplina e il valore <strong>Allenatore</strong> per ogni gruppo di discipline. Sono i due dati che servono per calcolare i rank della settimana e capire quali sono le libere più convenienti.',
+      bodyEn:'From Friday to Sunday, after receiving the week\'s CC gear, go to the <strong>CC Data</strong> tab and enter the <strong>CC Value</strong> for each event and the <strong>Coach</strong> value for each event group. These two pieces of data are what gets used to calculate the weekly ranks and figure out the best free events.'
+    },
+    {
+      n:2, badge:'🔴', titleIt:'Obbligatorio — Inserisci le discipline obbligatorie', titleEn:'Required — Enter the mandatory events',
+      bodyIt:'Il lunedì apri l\'app e inserisci le due discipline obbligatorie assegnate dal gioco per ogni giornata del CC. Puoi inserirle nel tab <strong>Dati CC</strong>, sezione Obbligatorie. Salvale una volta sola — rimangono fino alla settimana successiva.',
+      bodyEn:'On Monday, open the app and enter the two mandatory events the game assigns for each CC day. You can enter them in the <strong>CC Data</strong> tab, Mandatory section. Save them once — they stay until the following week.'
+    },
+    {
+      n:3, badge:'🔵', titleIt:'Facoltativo — Guarda il messaggio del giorno', titleEn:'Optional — Check the daily message',
+      bodyIt:'L\'admin genera il messaggio giornaliero con le staffette e le libere consigliate, nel tab <strong>Giorno CC</strong>. Una volta pubblicato lo trovi nel tab <strong>Messaggio</strong> e puoi copiarlo su WhatsApp/Telegram con un click. Comodo per non perdersi nulla, ma non serve inserire nulla qui.',
+      bodyEn:'The admin generates the daily message with relays and recommended free events, in the <strong>CC Day</strong> tab. Once published, you\'ll find it in the <strong>Message</strong> tab and can copy it to WhatsApp/Telegram with one click. Handy so you don\'t miss anything, but there\'s nothing to enter here.'
+    },
+    {
+      n:4, badge:'🔵', titleIt:'Facoltativo — Trofei e Personal Best', titleEn:'Optional — Trophies and Personal Bests',
+      bodyIt:'Puoi aggiornare i tuoi <strong>trofei totali</strong> e i tuoi <strong>PB per disciplina</strong> (maschili e femminili) in qualsiasi momento, nel tab <strong>Trofei</strong> — i dati vengono salvati come bozza personale. Ogni settimana l\'admin pubblica uno <strong>snapshot ufficiale</strong> che cristallizza i valori per il calcolo del trend e della classifica. I tempi si inseriscono nel formato <strong>10.45</strong> oppure <strong>1:45.23</strong> oppure <strong>2:10:45</strong> · le distanze in metri: <strong>7.23</strong>. Utile per le statistiche del club, ma non influenza le staffette.',
+      bodyEn:'You can update your <strong>total trophies</strong> and your <strong>PBs per event</strong> (men\'s and women\'s) at any time, in the <strong>Trophies</strong> tab — the data is saved as a personal draft. Each week the admin publishes an <strong>official snapshot</strong> that locks in the values for trend and ranking calculations. Enter times as <strong>10.45</strong> or <strong>1:45.23</strong> or <strong>2:10:45</strong> · distances in meters: <strong>7.23</strong>. Useful for club stats, but doesn\'t affect relays.'
+    },
+    {
+      n:5, badge:'🔵', titleIt:'Facoltativo — Scambi tra giocatori', titleEn:'Optional — Trading between players',
+      bodyIt:'Nel tab <strong>Scambi</strong> puoi pubblicare le carte che ti servono o che hai in più, e vedere le inserzioni degli altri membri del club. Utile per accelerare gli upgrade, ma non obbligatorio.',
+      bodyEn:'In the <strong>Trades</strong> tab you can post cards you need or have spare, and see other club members\' listings. Useful for speeding up upgrades, but not required.'
+    }
+  ];
+
+  let h = `<div class="card-title">${it?'Come usare questa app':'How to use this app'}</div>
+
+    <div class="alert a-info" style="margin-bottom:18px;font-size:13px;line-height:1.5">
+      💡 <strong>${it?'In sintesi:':'In short:'}</strong> ${it
+        ? 'gli unici dati davvero necessari al gioco sono <strong>Allenatore + Valore CC</strong> (tab Dati CC) e le <strong>Obbligatorie</strong>. Tutto il resto — Trofei, PB, Scambi — è utile per le statistiche del club ma non incide sul calcolo delle staffette.'
+        : 'the only data the game actually needs is <strong>Coach + CC Value</strong> (CC Data tab) and the <strong>Mandatory events</strong>. Everything else — Trophies, PBs, Trading — is useful for club stats but doesn\'t affect relay calculations.'}
+    </div>`;
+
+  STEPS.forEach(s=>{
+    h += `<div class="guide-step">
+      <div class="guide-num">${s.n}</div>
+      <div class="guide-body">
+        <div class="guide-title">${s.badge} ${it?s.titleIt:s.titleEn}</div>
+        <p>${it?s.bodyIt:s.bodyEn}</p>
+      </div>
+    </div>`;
+  });
+
+  h += `<div class="guide-step">
+    <div class="guide-num">6</div>
+    <div class="guide-body">
+      <div class="guide-title">${it?'Come leggere i rank colorati':'How to read the colored ranks'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">
+        <span><span class="rp r1">1</span> ${it?'Top 3 — punti sicuri':'Top 3 — safe points'}</span>
+        <span><span class="rp r2">5</span> ${it?'Top 4-6 — competitivo':'Top 4-6 — competitive'}</span>
+        <span><span class="rp r3">8</span> ${it?'Top 7-10 — possibile':'Top 7-10 — possible'}</span>
+        <span><span class="rp r4">15</span> ${it?'Oltre 10 — difficile':'Beyond 10 — difficult'}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="guide-step" style="border-bottom:none">
+    <div class="guide-num" style="background:var(--goldlt);color:var(--gold)">★</div>
+    <div class="guide-body">
+      <div class="guide-title">${it?'Password e accesso':'Password and access'}</div>
+      <p>${it
+        ? 'Seleziona il tuo nome dalla lista e inserisci la tua password. Puoi cambiarla in qualsiasi momento dal tab <strong>Dati CC</strong>, in fondo alla pagina. L\'admin può inserire e modificare dati per conto di qualsiasi giocatore selezionandolo dal menu in cima ad ogni sezione.'
+        : 'Select your name from the list and enter your password. You can change it any time from the <strong>CC Data</strong> tab, at the bottom of the page. The admin can enter and edit data on behalf of any player by selecting them from the menu at the top of each section.'}</p>
+    </div>
+  </div>`;
+
+  return h;
+}
+
 function renderOblSummary(){
   const obl=oblData[currentDay]||{};
   const players=allPlayers.filter(p=>p.active!==false);
