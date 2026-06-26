@@ -335,6 +335,52 @@ select{font-size:16px}
           📋 Messaggio del giorno →
         </button>
       </div>
+      <div id="admin-week-bar" style="display:none;margin-bottom:20px">
+        <div class="card">
+          <div class="card-title">🗓️ Gestione settimana</div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Settimana attiva: <strong id="admin-current-week-label">—</strong></p>
+          <button class="btn-primary-sm" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)" onclick="openNewWeekModal()">
+            🆕 Nuova settimana
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODALE NUOVA SETTIMANA (admin) -->
+    <div class="guide-modal-overlay" id="newweek-modal-overlay" style="display:none">
+      <div class="guide-modal-box" style="max-width:480px">
+        <div class="guide-modal-head">
+          <h3>🆕 Nuova settimana</h3>
+        </div>
+        <div class="guide-modal-body">
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Etichetta settimana</label>
+            <input type="text" id="newweek-label" placeholder="es. CC Diamond AA — Settimana 5" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Data inizio</label>
+            <input type="date" id="newweek-date" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div class="alert a-warn" style="font-size:12px;line-height:1.5;margin-bottom:14px">
+            ⚠️ <strong>Questa operazione:</strong>
+            <ul style="margin:6px 0 0 18px;padding:0">
+              <li>chiude la settimana attiva attuale</li>
+              <li>crea la nuova settimana come attiva</li>
+              <li>riporta automaticamente l'<strong>Allenatore</strong> di ogni giocatore dall'Inventario (non serve reinserirlo)</li>
+              <li>tutti dovranno reinserire <strong>Valore CC</strong> e <strong>Obbligatorie</strong> per la nuova settimana</li>
+            </ul>
+            Non è reversibile facilmente. I dati della settimana chiusa non vengono cancellati, restano semplicemente storici e non più visibili come attivi.
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Scrivi <strong>CONFERMA</strong> per procedere</label>
+            <input type="text" id="newweek-confirm-text" placeholder="CONFERMA" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px" oninput="document.getElementById('newweek-confirm-btn').disabled = this.value.trim()!=='CONFERMA'">
+          </div>
+        </div>
+        <div class="guide-modal-foot">
+          <button class="btn-primary-sm" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)" onclick="closeNewWeekModal()">Annulla</button>
+          <button class="btn-primary-sm" id="newweek-confirm-btn" disabled onclick="confirmNewWeek()">Crea nuova settimana</button>
+        </div>
+      </div>
     </div>
 
     <!-- TAB MESSAGGIO -->
@@ -540,6 +586,7 @@ async function loginSuccess() {
   if (isAdmin) document.getElementById('admin-badge').style.display='inline';
   if (isAdmin) document.getElementById('admin-calcola-bar').style.display='block';
   else document.getElementById('user-msg-bar').style.display='block';
+  if (isAdmin) document.getElementById('admin-week-bar').style.display='block';
 
   // Carica sempre la lista giocatori (serve per dropdown admin e per i dati)
   // Lo facciamo qui e non solo in init() perché al refresh il blocco login viene saltato
@@ -605,12 +652,94 @@ function logout() {
 }
 
 // ── DATA LOADING ─────────────────────────────────────────────
+// ── GESTIONE NUOVA SETTIMANA (admin) ───────────────────────────────────
+function openNewWeekModal() {
+  document.getElementById('newweek-label').value = '';
+  document.getElementById('newweek-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('newweek-confirm-text').value = '';
+  document.getElementById('newweek-confirm-btn').disabled = true;
+  document.getElementById('newweek-modal-overlay').style.display='flex';
+}
+
+function closeNewWeekModal() {
+  document.getElementById('newweek-modal-overlay').style.display='none';
+}
+
+async function confirmNewWeek() {
+  const label = document.getElementById('newweek-label').value.trim();
+  const dateStart = document.getElementById('newweek-date').value;
+  const confirmText = document.getElementById('newweek-confirm-text').value.trim();
+
+  if (confirmText !== 'CONFERMA') return; // sicurezza extra, il bottone è già disabled
+  if (!label) { alert('Inserisci un\'etichetta per la nuova settimana.'); return; }
+  if (!dateStart) { alert('Inserisci una data di inizio.'); return; }
+
+  const btn = document.getElementById('newweek-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creazione in corso…';
+
+  try {
+    // 1. Chiudo la settimana attiva attuale (se esiste)
+    if (weekData) {
+      await sb(`italy_weeks?id=eq.${weekData.id}`, {
+        method:'PATCH', body:JSON.stringify({active:false})
+      });
+    }
+
+    // 2. Creo la nuova settimana come attiva, riusando la lega della precedente se c'era
+    const newWeekRes = await sb('italy_weeks', {
+      method:'POST',
+      body:JSON.stringify({
+        label, date_start: dateStart, active: true,
+        league: weekData ? weekData.league : null
+      }),
+      prefer:'return=representation'
+    });
+    const newWeek = newWeekRes[0];
+
+    // 3. Bootstrap: copio l'Allenatore corrente di ogni giocatore dall'Inventario
+    //    nella nuova settimana, così nessuno deve reinserirlo da capo.
+    const inv = await sbGet('italy_inventory', 'select=player_id,coach_sr_value,coach_mr_value,coach_lr_value,coach_h_value,coach_j_value,coach_t_value');
+    const bootstrapRows = (inv||[])
+      .filter(r => r.player_id)
+      .map(r => ({
+        week_id: newWeek.id,
+        player_id: r.player_id,
+        coach_sr: r.coach_sr_value ?? null,
+        coach_mr: r.coach_mr_value ?? null,
+        coach_lr: r.coach_lr_value ?? null,
+        coach_h:  r.coach_h_value  ?? null,
+        coach_j:  r.coach_j_value  ?? null,
+        coach_t:  r.coach_t_value  ?? null,
+      }))
+      .filter(r => r.coach_sr!=null || r.coach_mr!=null || r.coach_lr!=null || r.coach_h!=null || r.coach_j!=null || r.coach_t!=null);
+
+    if (bootstrapRows.length) {
+      await sb('italy_rankings?on_conflict=week_id,player_id', {
+        method:'POST', body:JSON.stringify(bootstrapRows),
+        prefer:'resolution=merge-duplicates,return=representation'
+      });
+    }
+
+    closeNewWeekModal();
+    alert(`Nuova settimana creata: "${label}".\nL'allenatore di ${bootstrapRows.length} giocatori è già precompilato.\nRicarico la pagina per aggiornare tutto.`);
+    location.reload();
+  } catch(e) {
+    console.error('New week creation error:', e);
+    alert('Errore durante la creazione della nuova settimana: '+e.message+'\nControlla la console per i dettagli, nessuna modifica parziale dovrebbe essere rimasta a metà ma verifica manualmente su Supabase.');
+    btn.disabled = false;
+    btn.textContent = 'Crea nuova settimana';
+  }
+}
+
 async function loadWeekData() {
   try {
     const weeks = await sbGet('italy_weeks', 'select=*&active=eq.true&limit=1');
     weekData = weeks && weeks.length>0 ? weeks[0] : null;
     if (weekData) {
       document.getElementById('league-badge').textContent = weekData.league;
+      const lbl = document.getElementById('admin-current-week-label');
+      if (lbl) lbl.textContent = weekData.label || ('#'+weekData.id);
     }
   } catch(e) { console.error('Week load error:', e); }
 }
