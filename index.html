@@ -89,6 +89,16 @@ tbody tr:hover td{background:var(--bg3)}
 .r3{background:var(--orangelt);color:var(--orange)}
 .r4{background:var(--bg3);color:var(--text3)}
 
+/* OBBLIGATORIE — lista responsive (chip invece di tabella a colonne) */
+.obl-group-title{font-size:10px;font-weight:700;color:var(--royal);letter-spacing:.8px;text-transform:uppercase;margin:14px 0 6px;padding-bottom:5px;border-bottom:2px solid var(--royallt);font-family:var(--mono)}
+.obl-group:first-of-type .obl-group-title,.obl-group-title:first-child{margin-top:0}
+.obl-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--bg3)}
+.obl-row:last-child{border-bottom:none}
+.obl-row-head{display:flex;align-items:center;gap:6px;min-width:74px;flex-shrink:0;padding-top:2px}
+.obl-row-players{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+.obl-chip{display:inline-flex;align-items:center;gap:3px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:3px 8px;font-size:11px;font-weight:600;white-space:nowrap}
+.obl-empty{font-size:11px;color:var(--text3);padding-top:3px}
+
 /* BUTTONS */
 .btn{padding:8px 18px;font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);transition:all .15s;-webkit-appearance:none}
 .btn:hover{border-color:var(--royal);color:var(--royal)}
@@ -989,22 +999,11 @@ function renderOblSummary(){
     {code:'T', label:'Throws',discs:['SP','DT','HT','JT']},
   ];
 
-  // Figure out max players per discipline for column sizing
-  let maxPerDisc=0;
-  DISCS.forEach(d=>{ if(discMap[d].length>maxPerDisc) maxPerDisc=discMap[d].length; });
-  const cols=Math.max(maxPerDisc,4); // at least 4 player columns
-
-  let h=`<table style="font-size:11px">
-    <thead><tr>
-      <th style="min-width:36px">Grp</th>
-      <th style="min-width:52px">Disciplina</th>
-      <th style="min-width:18px;text-align:center">N</th>
-      ${Array.from({length:cols},(_,i)=>`<th style="min-width:80px">P${i+1}</th>`).join('')}
-    </tr></thead>
-    <tbody>`;
+  let h='';
 
   groups.forEach(grp=>{
-    grp.discs.forEach((d,di)=>{
+    h+=`<div class="obl-group-title">${grp.code} — ${grp.label}</div><div class="obl-group">`;
+    grp.discs.forEach(d=>{
       const ps=discMap[d]||[];
       const cnt=ps.length;
       let cntBadge='';
@@ -1012,10 +1011,6 @@ function renderOblSummary(){
       else if(cnt>3) cntBadge=`<span class="badge b-warn">${cnt}</span>`;
       else if(cnt>=2) cntBadge=`<span class="badge b-lib">${cnt}</span>`;
       else cntBadge=`<span class="badge b-obl">${cnt}</span>`;
-
-      const groupCell = di===0
-        ? `<td rowspan="${grp.discs.length}" style="font-weight:700;text-align:center;vertical-align:middle;font-family:var(--mono);font-size:10px;color:var(--royal);background:var(--royallt);border-radius:4px">${grp.code}</td>`
-        : '';
 
       // Admin: chi sarebbe il migliore TRA i giocatori assegnati (ps) secondo il rank attuale
       // e secondo lo score corretto k=2? Se sono persone diverse, segnalo l'inversione.
@@ -1030,31 +1025,30 @@ function renderOblSummary(){
         });
       }
 
-      const playerCells=Array.from({length:cols},(_,i)=>{
-        const p=ps[i];
-        if(!p) return `<td></td>`;
+      const chips = ps.length ? ps.map(p=>{
         const rank=getRank(p.id,d);
-        const topBadge=p.isTop?` <span style="font-size:8px;color:var(--gold);font-weight:700">★</span>`:'';
+        const topBadge=p.isTop?` <span style="font-size:9px;color:var(--gold);font-weight:700">★</span>`:'';
         const isBestAttuale = isAdmin && bestAttualeId===p.id;
         const isBestCorretto = isAdmin && bestCorrettoId===p.id;
         const diverge = isAdmin && bestAttualeId && bestCorrettoId && isBestAttuale && !isBestCorretto;
-        const corrFlag = diverge ? ` <span style="font-size:9px;color:var(--gold)" title="Con score corretto (k=${K_COACH}) il migliore tra questi sarebbe ${bestCorrettoId}">🔬⚠</span>` : '';
-        return `<td style="white-space:nowrap">
-          <span style="font-weight:600;font-size:11px">${p.id}</span>${topBadge}${corrFlag}
-          ${rank?`<span class="rp ${rClass(rank)}" style="width:18px;height:16px;line-height:16px;font-size:9px">${rank}</span>`:''}
-        </td>`;
-      }).join('');
+        const corrFlag = diverge ? ` <span style="font-size:10px;color:var(--gold)" title="Con score corretto (k=${K_COACH}) il migliore tra questi sarebbe ${bestCorrettoId}">🔬⚠</span>` : '';
+        return `<span class="obl-chip">
+          <span>${p.id}</span>${topBadge}${corrFlag}
+          ${rank?`<span class="rp ${rClass(rank)}" style="width:20px;height:16px;line-height:16px;font-size:9px">${rank}</span>`:''}
+        </span>`;
+      }).join('') : `<span class="obl-empty">—</span>`;
 
-      h+=`<tr>
-        ${groupCell}
-        <td><span class="badge b-obl" style="font-size:10px">${DL[d]||d}</span></td>
-        <td style="text-align:center">${cntBadge}</td>
-        ${playerCells}
-      </tr>`;
+      h+=`<div class="obl-row">
+        <div class="obl-row-head">
+          <span class="badge b-obl">${DL[d]||d}</span>
+          ${cntBadge}
+        </div>
+        <div class="obl-row-players">${chips}</div>
+      </div>`;
     });
+    h+=`</div>`;
   });
 
-  h+=`</tbody></table>`;
   if(isAdmin){
     h+=`<p style="font-size:11px;color:var(--text3);margin-top:8px">🔬⚠ = con lo score corretto (k=${K_COACH}, sperimentale) il migliore per quella disciplina sarebbe un altro giocatore tra quelli assegnati.</p>`;
   }
