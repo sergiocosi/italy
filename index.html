@@ -335,6 +335,12 @@ select{font-size:16px}
         <div class="card-title" id="card-title-oblday">Obbligatorie del giorno</div>
         <div id="obl-summary"><div class="loading"><span class="spinner"></span>Caricamento...</div></div>
       </div>
+      <div id="admin-obl-check-bar" style="display:none">
+        <div class="card">
+          <div class="card-title">✅ Controllo obbligatorie settimana</div>
+          <div id="obl-check"><div class="loading"><span class="spinner"></span>Caricamento...</div></div>
+        </div>
+      </div>
       <div id="admin-calcola-bar" style="display:none;margin-bottom:20px">
         <button class="btn-primary-sm" onclick="calcola();showTab('messaggio')">
           Calcola e genera messaggio →
@@ -365,7 +371,11 @@ select{font-size:16px}
         <div class="guide-modal-body">
           <div style="margin-bottom:14px">
             <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Etichetta settimana</label>
-            <input type="text" id="newweek-label" placeholder="es. CC Diamond AA — Settimana 5" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+            <input type="text" id="newweek-label" placeholder="es. Settimana 5 — CC Diamond AA" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Lega</label>
+            <input type="text" id="newweek-league" placeholder="es. Diamond AAA" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
           </div>
           <div style="margin-bottom:14px">
             <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Data inizio</label>
@@ -476,7 +486,7 @@ function refreshAllUI(){
   const sd=document.getElementById('card-title-selday'); if(sd)sd.textContent=t('select_day');
   const od=document.getElementById('card-title-oblday'); if(od)od.textContent=t('obl_day');
   const rd=document.getElementById('card-title-rankdisc'); if(rd)rd.textContent=t('rank_by_disc');
-  renderOblSummary();renderInsertTab();
+  renderOblSummary();renderOblCheck();renderInsertTab();
   if(document.getElementById('tab-staffette').style.display!=='none')renderStaffette();
   if(document.getElementById('tab-ranking').style.display!=='none')renderRankingTable();
   if(document.getElementById('tab-trofei')&&document.getElementById('tab-trofei').style.display!=='none')renderTrofei();
@@ -612,6 +622,7 @@ async function loginSuccess() {
   await loadInventoryData();
   await loadCardsData();
   renderOblSummary();
+  renderOblCheck();
   renderInsertTab();
   populateDiscSelect();
   await checkShowGuideModal();
@@ -665,6 +676,7 @@ function logout() {
 // ── GESTIONE NUOVA SETTIMANA (admin) ───────────────────────────────────
 function openNewWeekModal() {
   document.getElementById('newweek-label').value = '';
+  document.getElementById('newweek-league').value = weekData ? (weekData.league || '') : '';
   document.getElementById('newweek-date').value = new Date().toISOString().slice(0,10);
   document.getElementById('newweek-confirm-text').value = '';
   document.getElementById('newweek-confirm-btn').disabled = true;
@@ -677,11 +689,13 @@ function closeNewWeekModal() {
 
 async function confirmNewWeek() {
   const label = document.getElementById('newweek-label').value.trim();
+  const league = document.getElementById('newweek-league').value.trim();
   const dateStart = document.getElementById('newweek-date').value;
   const confirmText = document.getElementById('newweek-confirm-text').value.trim();
 
   if (confirmText !== 'CONFERMA') return; // sicurezza extra, il bottone è già disabled
   if (!label) { alert('Inserisci un\'etichetta per la nuova settimana.'); return; }
+  if (!league) { alert('Inserisci la lega attuale.'); return; }
   if (!dateStart) { alert('Inserisci una data di inizio.'); return; }
 
   const btn = document.getElementById('newweek-confirm-btn');
@@ -696,12 +710,12 @@ async function confirmNewWeek() {
       });
     }
 
-    // 2. Creo la nuova settimana come attiva, riusando la lega della precedente se c'era
+    // 2. Creo la nuova settimana come attiva, con la lega indicata dall'admin
     const newWeekRes = await sb('italy_weeks', {
       method:'POST',
       body:JSON.stringify({
         label, date_start: dateStart, active: true,
-        league: weekData ? weekData.league : null
+        league
       }),
       prefer:'return=representation'
     });
@@ -1053,6 +1067,46 @@ function renderOblSummary(){
     h+=`<p style="font-size:11px;color:var(--text3);margin-top:8px">🔬⚠ = con lo score corretto (k=${K_COACH}, sperimentale) il migliore per quella disciplina sarebbe un altro giocatore tra quelli assegnati.</p>`;
   }
   document.getElementById('obl-summary').innerHTML=h;
+}
+
+// ── OBL CHECK: chi ha inserito le obbligatorie della settimana ─
+function renderOblCheck(){
+  const bar=document.getElementById('admin-obl-check-bar');
+  if(!isAdmin){ if(bar) bar.style.display='none'; return; }
+  if(bar) bar.style.display='block';
+
+  const players=allPlayers.filter(p=>p.active!==false);
+  const dayNames={1:t('day1'),2:t('day2'),3:t('day3'),4:t('day4')};
+
+  const complete=[], missing=[];
+  players.forEach(p=>{
+    const missingDays=[1,2,3,4].filter(d=>!((oblData[d]||{})[p.id]||[]).length);
+    if(missingDays.length===0) complete.push(p.id);
+    else missing.push({id:p.id, missingDays});
+  });
+
+  let h='';
+  if(missing.length===0){
+    h+=`<div class="alert a-success" style="margin-bottom:0">✅ Tutti i ${players.length} giocatori hanno inserito le obbligatorie per tutti e 4 i giorni.</div>`;
+  }else{
+    h+=`<div class="alert a-warn" style="margin-bottom:12px">⚠️ <strong>${missing.length}</strong> su ${players.length} giocatori hanno obbligatorie mancanti per almeno un giorno.</div>`;
+    h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+    h+=missing.map(m=>{
+      const daysLabel=m.missingDays.map(d=>dayNames[d]).join(', ');
+      return `<span class="obl-chip" style="border-color:var(--red)"><span>${m.id}</span><span class="badge b-err" style="font-size:9px">${daysLabel}</span></span>`;
+    }).join('');
+    h+=`</div>`;
+
+    const reminderLines=missing.map(m=>`- ${m.id} (manca: ${m.missingDays.map(d=>dayNames[d]).join(', ')})`).join('\n');
+    const reminderText=`⚠️ Obbligatorie mancanti questa settimana:\n${reminderLines}\n\nInseritele nel tab "Dati CC" appena possibile 🙏`;
+    h+=`<button class="btn-copy" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(reminderText)}')).then(()=>alert('Lista copiata!'))">📋 Copia lista mancanti</button>`;
+  }
+
+  if(complete.length){
+    h+=`<p style="font-size:11px;color:var(--text3);margin-top:10px">✅ Completi: ${complete.join(', ')}</p>`;
+  }
+
+  document.getElementById('obl-check').innerHTML=h;
 }
 
 // ── OPTIMIZATION ─────────────────────────────────────────────
@@ -1550,7 +1604,7 @@ function renderStaffette(){
           ondragstart="dragStartRunner(event,'${disc}','${k}','${p}')"
           ondragend="this.classList.remove('dragging')"
           ondragover="event.preventDefault();event.stopPropagation()"
-          ondrop="event.stopPropagation();dropRunner(event,'${disc}','${k}');document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'))"`:''}>
+          ondrop="event.stopPropagation();dropRunner(event,'${disc}','${k}','${p}');document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'))"`:''}>
           <span class="rnum">${i+1}</span>
           <span class="pname">${p}</span>${corrFlag}
           <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3)">${(getScore(p,disc)||0).toLocaleString()} ${rPill(p,disc)}</span>
@@ -1576,10 +1630,12 @@ function dragStartRunner(event,disc,squad,player){
   setTimeout(()=>event.target.classList.add('dragging'),0);
 }
 
-function dropRunner(event,disc,targetSquad){
+function dropRunner(event,disc,targetSquad,targetPlayer){
   event.preventDefault();
   const{disc:srcDisc,squad:srcSquad,player}=_dragSource;
-  if(!player||srcDisc!==disc||srcSquad===targetSquad) return;
+  if(!player||srcDisc!==disc) return;
+  if(targetPlayer===player) return;
+  if(srcSquad===targetSquad && !targetPlayer) return; // drop su area libera della stessa griglia: nulla da fare
 
   // Copia squads correnti come override (parte da override se esiste, altrimenti da buildSquads)
   const base=staffOverride[disc]||buildSquads(disc,staffMode);
@@ -1590,15 +1646,27 @@ function dropRunner(event,disc,targetSquad){
   const srcIdx=ov[srcSquad].indexOf(player);
   if(srcIdx===-1) return;
 
-  const tgtList=ov[targetSquad];
-  // Se la griglia target ha già 4, fai swap col primo; altrimenti sposta
-  if(tgtList.length>=4){
-    const swapPlayer=tgtList[0];
-    tgtList[0]=player;
-    ov[srcSquad][srcIdx]=swapPlayer;
+  if(targetPlayer){
+    // Scambio esatto: il giocatore trascinato prende il posto di quello su cui è stato rilasciato
+    const tgtIdx=ov[targetSquad].indexOf(targetPlayer);
+    if(tgtIdx===-1) return;
+    if(srcSquad===targetSquad){
+      [ov[srcSquad][srcIdx],ov[srcSquad][tgtIdx]]=[ov[srcSquad][tgtIdx],ov[srcSquad][srcIdx]];
+    } else {
+      ov[targetSquad][tgtIdx]=player;
+      ov[srcSquad][srcIdx]=targetPlayer;
+    }
   } else {
-    ov[srcSquad].splice(srcIdx,1);
-    tgtList.push(player);
+    // Drop sull'area libera della griglia (non su un giocatore preciso)
+    const tgtList=ov[targetSquad];
+    if(tgtList.length>=4){
+      const swapPlayer=tgtList[0];
+      tgtList[0]=player;
+      ov[srcSquad][srcIdx]=swapPlayer;
+    } else {
+      ov[srcSquad].splice(srcIdx,1);
+      tgtList.push(player);
+    }
   }
 
   staffOverride[disc]=ov;
@@ -1814,6 +1882,7 @@ async function saveObbligatorie(){
     msg.style.display='inline';
     setTimeout(()=>msg.style.display='none',3000);
     renderOblSummary();
+    renderOblCheck();
   }catch(e){
     alert('Errore nel salvataggio: '+e.message);
   }
