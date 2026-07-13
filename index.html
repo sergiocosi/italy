@@ -53,6 +53,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .btn-primary:hover{background:var(--royal2)}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed}
 .error-msg{background:var(--redlt);color:var(--red);border:1px solid #f0c0c0;border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-top:12px;display:none}
+.login-version{text-align:center;font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:18px;opacity:.6}
 
 /* TABS */
 .tabs{display:flex;background:var(--bg2);border-radius:var(--radius2);padding:4px;gap:2px;margin-bottom:20px;box-shadow:var(--shadow);flex-wrap:wrap}
@@ -301,6 +302,7 @@ select{font-size:16px}
     </div>
     <button class="btn-primary" onclick="doLogin()">ACCEDI</button>
     <div class="error-msg" id="login-error">Password errata o giocatore non trovato.</div>
+    <div class="login-version" id="login-version"></div>
   </div>
 </div>
 
@@ -465,6 +467,10 @@ select{font-size:16px}
 const SUPABASE_URL = 'https://wkrkqkvswdwdjghfwebo.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indrcmtxa3Zzd2R3ZGpnaGZ3ZWJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2OTA3OTksImV4cCI6MjA4OTI2Njc5OX0.hBgyybr8i2GPG9rFPsZGOsJ9EyWEBPbrcJ96ttkeRbI';
 
+// Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
+// così in fondo alla pagina di login vedi subito se è online la versione giusta.
+const APP_VERSION='v1.1 — 13 lug 2026';
+
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
 const GRP={'100m':'SR','200m':'SR','400m':'SR','800m':'MR','1500m':'MR','5000m':'LR','10000m':'LR','Marathon':'LR','110H':'H','400H':'H','3000S':'H','LJ':'J','TJ':'J','HJ':'J','PV':'J','SP':'T','DT':'T','HT':'T','JT':'T'};
@@ -552,6 +558,9 @@ async function sbUpsert(table, data) {
 
 // ── INIT ────────────────────────────────────────────────────
 async function init() {
+  const vEl=document.getElementById('login-version');
+  if(vEl) vEl.textContent=APP_VERSION;
+
   // Auto-login se c'è una sessione salvata
   const savedUser = localStorage.getItem('italy_logged_user');
   if (savedUser) {
