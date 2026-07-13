@@ -523,6 +523,8 @@ let adminActingAs=null;
 let trofeiData={current:{},previous:{}}; // week trophies
 let messaggiData={};  // day -> {messaggio, staff_mode, published_by, published_at}
 let msgCalcolato={};  // day -> true se appena calcolato (non ancora pubblicato)
+let currentDraftMsg='';      // testo del messaggio calcolato ma non ancora pubblicato (per Copia/Pubblica)
+let currentPublishedMsg='';  // testo del messaggio già pubblicato mostrato a schermo (per Copia)
 
 // ── SUPABASE HELPERS ────────────────────────────────────────
 async function sb(path, opts={}) {
@@ -1336,6 +1338,7 @@ function renderMessaggioTab(){
 }
 
 function renderMessaggioPubblicato(saved){
+  currentPublishedMsg=saved.messaggio;
   const el=document.getElementById('msg-content');
   const ts=saved.published_at?new Date(saved.published_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'';
   const modeLabels={serpentino:t('mode_equil'),topheavy:t('mode_top'),ottimizzato:t('mode_bal')};
@@ -1351,7 +1354,7 @@ function renderMessaggioPubblicato(saved){
   h+=`<div class="card">
     <div style="white-space:pre-wrap;font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--text)">${saved.messaggio}</div>
     <div style="margin-top:14px">
-      <button class="btn-copy" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(saved.messaggio)}')).then(()=>alert('Messaggio copiato!'))">
+      <button class="btn-copy" onclick="copyPublishedMsg()">
         📋 Copia messaggio
       </button>
     </div>
@@ -1382,6 +1385,24 @@ async function pubblicaMessaggio(msgText, staffMode){
     return false;
   }
 }
+
+// Helper "sicuri" per Copia/Pubblica: leggono il testo da variabile JS invece di
+// incollarlo dentro l'attributo onclick (che si rompe con apostrofi o altri
+// caratteri speciali, es. testo in inglese con "player's").
+function copyDraftMsg(){
+  navigator.clipboard.writeText(currentDraftMsg).then(()=>alert('Messaggio copiato!'));
+}
+function copyPublishedMsg(){
+  navigator.clipboard.writeText(currentPublishedMsg).then(()=>alert('Messaggio copiato!'));
+}
+function publishDraftMsg(staffMode){
+  pubblicaMessaggio(currentDraftMsg, staffMode).then(ok=>{
+    if(ok){
+      document.getElementById('pub-ok').style.display='inline';
+      setTimeout(()=>document.getElementById('pub-ok').style.display='none',3000);
+    }
+  });
+}
 function renderMessaggio(obl,libere,discCount,altriGuide,libereCorrette){
   const dayIT={1:'LUNEDÌ',2:'MARTEDÌ',3:'MERCOLEDÌ',4:'GIOVEDÌ'};
   const dayEN={1:'MONDAY',2:'TUESDAY',3:'WEDNESDAY',4:'THURSDAY'};
@@ -1400,6 +1421,7 @@ function renderMessaggio(obl,libere,discCount,altriGuide,libereCorrette){
   const topLines=topPlayers.map(p=>`${p.id}: ${(libere[p.id]||[]).join(' + ')||'—'}`).join('\n');
   const altriText=`${t('msg_1scelta')}: ${pref1.join(' / ')||'—'}\n${t('msg_2scelta')}: ${pref2.join(' / ')||'—'}\n${t('msg_evitare')}: ${avoid.join(' / ')||'—'}`;
   const fullMsg=`*DAY ${currentDay} – ${dayIT[currentDay]} / ${dayEN[currentDay]}*\n\n📌 *${t('msg_staffette')}:*\n${staffText}\n\n🏃 *${t('msg_libere_top')}:*\n${topLines}\n\n👥 *${t('msg_altri')}:*\n${altriText}\n\nℹ️ _${t('msg_note_top')}_`;
+  currentDraftMsg=fullMsg;
 
   // Staffette table
   let sR100='',sR400='';
@@ -1443,8 +1465,8 @@ function renderMessaggio(obl,libere,discCount,altriGuide,libereCorrette){
       <div><div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:6px;font-family:var(--mono)">${t('msg_2scelta').toUpperCase()}</div><div class="disc-wrap">${pref2.map(d=>`<span class="badge b-rif">${d}</span>`).join(' ')||'—'}</div></div>
       <div><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px;font-family:var(--mono)">${t('msg_evitare').toUpperCase()}</div><div class="disc-wrap">${avoid.map(d=>`<span class="badge b-gray">${d}</span>`).join(' ')||'—'}</div></div>
     </div>
-    <button class="btn-copy" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(fullMsg)}')).then(()=>alert('Messaggio copiato!'))">${t('copy_msg')}</button>
-    <button class="btn-primary-sm" style="margin-left:10px" onclick="pubblicaMessaggio(decodeURIComponent('${encodeURIComponent(fullMsg)}'),'${staffMode}').then(ok=>{if(ok){document.getElementById('pub-ok').style.display='inline';setTimeout(()=>document.getElementById('pub-ok').style.display='none',3000);}})">
+    <button class="btn-copy" onclick="copyDraftMsg()">${t('copy_msg')}</button>
+    <button class="btn-primary-sm" style="margin-left:10px" onclick="publishDraftMsg('${staffMode}')">
       🚀 Pubblica per tutti
     </button>
     <span id="pub-ok" style="display:none;margin-left:8px;font-size:12px;color:var(--green);font-weight:600">✅ Pubblicato!</span>
