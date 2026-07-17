@@ -327,10 +327,10 @@ select{font-size:16px}
       <div class="card">
         <div class="card-title" id="card-title-selday">Seleziona giorno</div>
         <div class="day-bar">
-          <button class="day-btn active" onclick="setDay(1,this)">Lunedì</button>
-          <button class="day-btn" onclick="setDay(2,this)">Martedì</button>
-          <button class="day-btn" onclick="setDay(3,this)">Mercoledì</button>
-          <button class="day-btn" onclick="setDay(4,this)">Giovedì</button>
+          <button class="day-btn active" data-day="1" onclick="setDay(1,this)">Lunedì</button>
+          <button class="day-btn" data-day="2" onclick="setDay(2,this)">Martedì</button>
+          <button class="day-btn" data-day="3" onclick="setDay(3,this)">Mercoledì</button>
+          <button class="day-btn" data-day="4" onclick="setDay(4,this)">Giovedì</button>
         </div>
       </div>
       <div class="card">
@@ -407,6 +407,12 @@ select{font-size:16px}
 
     <!-- TAB MESSAGGIO -->
     <div id="tab-messaggio" style="display:none">
+      <div class="day-selector" style="margin-bottom:14px">
+        <button class="day-btn" data-day="1" onclick="setDay(1,this)">Lunedì</button>
+        <button class="day-btn" data-day="2" onclick="setDay(2,this)">Martedì</button>
+        <button class="day-btn" data-day="3" onclick="setDay(3,this)">Mercoledì</button>
+        <button class="day-btn" data-day="4" onclick="setDay(4,this)">Giovedì</button>
+      </div>
       <div id="msg-content"><div class="loading"><span class="spinner"></span>Caricamento...</div></div>
     </div>
 
@@ -469,16 +475,19 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.3 — 14 lug 2026';
+const APP_VERSION='v1.4 — 14 lug 2026';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
 const GRP={'100m':'SR','200m':'SR','400m':'SR','800m':'MR','1500m':'MR','5000m':'LR','10000m':'LR','Marathon':'LR','110H':'H','400H':'H','3000S':'H','LJ':'J','TJ':'J','HJ':'J','PV':'J','SP':'T','DT':'T','HT':'T','JT':'T'};
 let lang='it';
-const I18N={it:{tab_giorno:'📅 Giorno CC',tab_msg:'📨 Messaggio',tab_staff:'🏃 Staffette',tab_rank:'📊 Ranking',tab_insert:'✏️ Dati CC',tab_inventario:'🎒 Inventario',tab_trofei:'🏆 Trofei',tab_scambi:'🔄 Scambi',tab_guide:'❓ Guida',day1:'Lunedì',day2:'Martedì',day3:'Mercoledì',day4:'Giovedì',obl_day:'Obbligatorie del giorno',calc_btn:'Calcola e genera messaggio →',msg_empty:'Vai al tab "Giorno CC" e premi Calcola.',trofei_title:'Trofei & Trend settimanale',trofei_player:'Giocatore',trofei_pts:'Trofei',trofei_trend:'Trend',trofei_100:'Ultimo 100m',trofei_400:'Ultimo 400m',trofei_insert:'Inserisci dati trofei (solo admin)',trofei_save:'Salva trofei',trofei_no_data:'Nessun dato disponibile.',logout:'Esci',loading:'Caricamento...',error_conn:'Errore di connessione. Riprova.',error_pwd:'Password errata o giocatore non trovato.',error_sel:'Seleziona il tuo nome e inserisci la password.',saved:'✓ Salvato!',error_save:'Errore nel salvataggio: ',no_week:'Nessuna settimana attiva trovata.',admin_for:'Stai inserendo dati per:',obl_title:'Obbligatorie della settimana',obl_desc:'Inserisci le discipline obbligatorie assegnate ogni giorno.',gear_title:'Atleta 🔥, Allenatore 💧 e Centro 🏟 per gruppo',gear_desc:'Inserisci i valori che vedi nel gioco. Aggiorna solo quando fai un upgrade.',athlete:'Atleta 🔥',coach:'Allenatore 💧',center:'Centro 🏟',valcc_title:'Valore CC per disciplina',valcc_desc:'Il valore mostrato dal gioco per ogni disciplina. Non includere l\'allenatore: lo aggiungi separatamente qui sotto. Si aggiorna dal venerdì alla domenica.',valcc_info:'💡 Ranking CC = Valore CC disciplina + Allenatore del gruppo',save_gear:'Salva allenatore',save_att:'Salva attrezzatura',mode_equil:'Equilibrate',mode_top:'Top-heavy',mode_bal:'Bilanciato ottimale',mode_desc_equil:'Equilibrate: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, poi Equilibrate B/C · D=13-16',mode_desc_bal:'Bilanciato ottimale: minimizza scarto Σscore tra le 3 griglie',relay:'Griglia',relay_note1:'punta a punti',relay_note4:'paracadute',relay_free:'libera',select_day:'Seleziona giorno',player:'Giocatore',level:'Livello',rank_by_disc:'Ranking per disciplina',score_cc:'Score CC',free1:'1ª libera',free2:'2ª libera',admin_mode:'Modalità admin — inserisci per',obl_label1:'Obbligatoria 1',obl_label2:'Obbligatoria 2',grp_sprint:'Sprint',grp_mid:'Media dist.',grp_long:'Lunga dist.',grp_hurdles:'Ostacoli',grp_jumps:'Salti',grp_throws:'Lanci',center_disc:'CENTRO 🏟 PER DISCIPLINA',not_pub:'Il messaggio per {DAY} non è ancora stato pubblicato dall\'admin. Controlla più tardi!',copy_msg:'📋 Copia messaggio completo',change_pwd:'🔐 Cambia password',pwd_desc:'Inserisci la password attuale e quella nuova.',pwd_old:'Password attuale',pwd_new:'Nuova password',pwd_confirm:'Conferma nuova',pwd_btn:'Cambia password',fifth_sixth:'Quinta e Sesta: scelta libera per i rimanenti.',msg_staffette:'STAFFETTE',msg_libere_top:'LIBERE CONSIGLIATE',msg_altri:'LIBERE CONSIGLIATE PER GLI ALTRI',msg_1scelta:'1ª scelta',msg_2scelta:'2ª scelta',msg_evitare:'Evitare',msg_note_top:'⭐ indica chi rientra anche tra i migliori del ranking generale del club, calcolato in base al punteggio medio su tutte le discipline (attrezzatura + allenatore): può cambiare di settimana in settimana.',msg_copertura:'4° di riserva, non guadagno punti',msg_note_cov:'🔧 indica un 4° giocatore di riserva su una disciplina già coperta dai primi 3: non aggiunge punti (il gioco conta solo i migliori 3), è solo un cuscinetto di sicurezza nel caso uno dei 3 titolari renda meno del previsto in gara.'},en:{tab_giorno:'📅 CC Day',tab_msg:'📨 Message',tab_staff:'🏃 Relays',tab_rank:'📊 Ranking',tab_insert:'✏️ CC Data',tab_inventario:'🎒 Inventory',tab_trofei:'🏆 Trophies',tab_scambi:'🔄 Trades',tab_guide:'❓ Guide',day1:'Monday',day2:'Tuesday',day3:'Wednesday',day4:'Thursday',obl_day:'Mandatory events of the day',calc_btn:'Calculate & generate message →',msg_empty:'Go to "CC Day" tab and press Calculate.',trofei_title:'Trophies & Weekly trend',trofei_player:'Player',trofei_pts:'Trophies',trofei_trend:'Trend',trofei_100:'Last 100m',trofei_400:'Last 400m',trofei_insert:'Insert trophies data (admin only)',trofei_save:'Save trophies',trofei_no_data:'No data available.',logout:'Logout',loading:'Loading...',error_conn:'Connection error. Please retry.',error_pwd:'Wrong password or player not found.',error_sel:'Select your name and enter the password.',saved:'✓ Saved!',error_save:'Save error: ',no_week:'No active week found.',admin_for:'Inserting data for:',obl_title:'Weekly mandatory events',obl_desc:'Enter the mandatory events assigned each day.',gear_title:'Athlete 🔥, Coach 💧 & Training Centre 🏟 by group',gear_desc:'Enter values from the game. Update only when you upgrade.',athlete:'Athlete 🔥',coach:'Coach 💧',center:'Centre 🏟',valcc_title:'CC Value by event',valcc_desc:'The value shown in the game for each event. Don\'t include the coach: add it separately below. Updates from Friday through Sunday.',valcc_info:'💡 CC Ranking = CC Value (event) + Coach (group)',save_gear:'Save coach',save_att:'Save equipment',mode_equil:'Balanced',mode_top:'Top-heavy',mode_bal:'Optimal balanced',mode_desc_equil:'Balanced: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, then Balanced B/C · D=13-16',mode_desc_bal:'Optimal balanced: minimizes score gap between the 3 relays',relay:'Relay',relay_note1:'scoring',relay_note4:'safety',relay_free:'free',select_day:'Select day',player:'Player',level:'Level',rank_by_disc:'Ranking by event',score_cc:'CC Score',free1:'1st free',free2:'2nd free',admin_mode:'Admin mode — insert for',obl_label1:'Mandatory 1',obl_label2:'Mandatory 2',grp_sprint:'Sprint',grp_mid:'Mid dist.',grp_long:'Long dist.',grp_hurdles:'Hurdles',grp_jumps:'Jumps',grp_throws:'Throws',center_disc:'TRAINING CENTRE 🏟 BY EVENT',not_pub:'The message for {DAY} has not been published by the admin yet. Check later!',copy_msg:'📋 Copy full message',change_pwd:'🔐 Change password',pwd_desc:'Enter your current password and the new one.',pwd_old:'Current password',pwd_new:'New password',pwd_confirm:'Confirm new',pwd_btn:'Change password',fifth_sixth:'5th & 6th: free choice for the rest.',msg_staffette:'RELAYS',msg_libere_top:'RECOMMENDED FREE EVENTS',msg_altri:'RECOMMENDED FREE EVENTS FOR THE OTHERS',msg_1scelta:'1st choice',msg_2scelta:'2nd choice',msg_evitare:'Avoid',msg_note_top:'⭐ marks players who are also among the club\'s best overall, based on their average score across all events (gear + coach): it can change from week to week.',msg_copertura:'4th-string backup, no points gain',msg_note_cov:'🔧 marks a 4th backup player on an event already covered by the top 3: it adds no points (the game only counts the best 3), it is just a safety cushion in case one of the 3 starters underperforms in the actual match.'}};
+const I18N={it:{tab_giorno:'📅 Giorno CC',tab_msg:'📨 Messaggio',tab_staff:'🏃 Staffette',tab_rank:'📊 Ranking',tab_insert:'✏️ Dati CC',tab_inventario:'🎒 Inventario',tab_trofei:'🏆 Trofei',tab_scambi:'🔄 Scambi',tab_guide:'❓ Guida',day1:'Lunedì',day2:'Martedì',day3:'Mercoledì',day4:'Giovedì',obl_day:'Obbligatorie del giorno',calc_btn:'Calcola e genera messaggio →',msg_empty:'Vai al tab "Giorno CC" e premi Calcola.',trofei_title:'Trofei & Trend settimanale',trofei_player:'Giocatore',trofei_pts:'Trofei',trofei_trend:'Trend',trofei_100:'Ultimo 100m',trofei_400:'Ultimo 400m',trofei_insert:'Inserisci dati trofei (solo admin)',trofei_save:'Salva trofei',trofei_no_data:'Nessun dato disponibile.',logout:'Esci',loading:'Caricamento...',error_conn:'Errore di connessione. Riprova.',error_pwd:'Password errata o giocatore non trovato.',error_sel:'Seleziona il tuo nome e inserisci la password.',saved:'✓ Salvato!',error_save:'Errore nel salvataggio: ',no_week:'Nessuna settimana attiva trovata.',admin_for:'Stai inserendo dati per:',obl_title:'Obbligatorie della settimana',obl_desc:'Inserisci le discipline obbligatorie assegnate ogni giorno.',gear_title:'Atleta 🔥, Allenatore 💧 e Centro 🏟 per gruppo',gear_desc:'Inserisci i valori che vedi nel gioco. Aggiorna solo quando fai un upgrade.',athlete:'Atleta 🔥',coach:'Allenatore 💧',center:'Centro 🏟',valcc_title:'Valore CC per disciplina',valcc_desc:'Il valore mostrato dal gioco per ogni disciplina. Non includere l\'allenatore: lo aggiungi separatamente qui sotto. Si aggiorna dal venerdì alla domenica.',valcc_info:'💡 Ranking CC = Valore CC disciplina + Allenatore del gruppo',save_gear:'Salva allenatore',save_att:'Salva attrezzatura',mode_equil:'Equilibrate',mode_top:'Top-heavy',mode_bal:'Bilanciato ottimale',mode_desc_equil:'Equilibrate: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, poi Equilibrate B/C · D=13-16',mode_desc_bal:'Bilanciato ottimale: minimizza scarto Σscore tra le 3 griglie',relay:'Griglia',relay_note1:'punta a punti',relay_note4:'paracadute',relay_free:'libera',select_day:'Seleziona giorno',player:'Giocatore',level:'Livello',rank_by_disc:'Ranking per disciplina',score_cc:'Score CC',free1:'1ª libera',free2:'2ª libera',admin_mode:'Modalità admin — inserisci per',obl_label1:'Obbligatoria 1',obl_label2:'Obbligatoria 2',grp_sprint:'Sprint',grp_mid:'Media dist.',grp_long:'Lunga dist.',grp_hurdles:'Ostacoli',grp_jumps:'Salti',grp_throws:'Lanci',center_disc:'CENTRO 🏟 PER DISCIPLINA',not_pub:'Il messaggio per {DAY} non è ancora stato pubblicato dall\'admin. Controlla più tardi!',copy_msg:'📋 Copia messaggio completo',change_pwd:'🔐 Cambia password',pwd_desc:'Inserisci la password attuale e quella nuova.',pwd_old:'Password attuale',pwd_new:'Nuova password',pwd_confirm:'Conferma nuova',pwd_btn:'Cambia password',fifth_sixth:'Quinta e Sesta: scelta libera per i rimanenti.',msg_staffette:'STAFFETTE',msg_libere_top:'LIBERE CONSIGLIATE',msg_altri:'LIBERE CONSIGLIATE PER GLI ALTRI',msg_1scelta:'1ª scelta',msg_2scelta:'2ª scelta',msg_evitare:'Evitare',msg_note_top:'⭐ indica chi rientra anche tra i migliori del ranking generale del club, calcolato in base al punteggio medio su tutte le discipline (attrezzatura + allenatore): può cambiare di settimana in settimana.',msg_copertura:'4° di riserva, non guadagno punti',msg_note_cov:'🔧 indica un 4° giocatore di riserva su una disciplina già coperta dai primi 3: non aggiunge punti (il gioco conta solo i migliori 3), è solo un cuscinetto di sicurezza nel caso uno dei 3 titolari renda meno del previsto in gara.'},en:{tab_giorno:'📅 CC Day',tab_msg:'📨 Message',tab_staff:'🏃 Relays',tab_rank:'📊 Ranking',tab_insert:'✏️ CC Data',tab_inventario:'🎒 Inventory',tab_trofei:'🏆 Trophies',tab_scambi:'🔄 Trades',tab_guide:'❓ Guide',day1:'Monday',day2:'Tuesday',day3:'Wednesday',day4:'Thursday',obl_day:'Mandatory events of the day',calc_btn:'Calculate & generate message →',msg_empty:'Go to "CC Day" tab and press Calculate.',trofei_title:'Trophies & Weekly trend',trofei_player:'Player',trofei_pts:'Trophies',trofei_trend:'Trend',trofei_100:'Last 100m',trofei_400:'Last 400m',trofei_insert:'Insert trophies data (admin only)',trofei_save:'Save trophies',trofei_no_data:'No data available.',logout:'Logout',loading:'Loading...',error_conn:'Connection error. Please retry.',error_pwd:'Wrong password or player not found.',error_sel:'Select your name and enter the password.',saved:'✓ Saved!',error_save:'Save error: ',no_week:'No active week found.',admin_for:'Inserting data for:',obl_title:'Weekly mandatory events',obl_desc:'Enter the mandatory events assigned each day.',gear_title:'Athlete 🔥, Coach 💧 & Training Centre 🏟 by group',gear_desc:'Enter values from the game. Update only when you upgrade.',athlete:'Athlete 🔥',coach:'Coach 💧',center:'Centre 🏟',valcc_title:'CC Value by event',valcc_desc:'The value shown in the game for each event. Don\'t include the coach: add it separately below. Updates from Friday through Sunday.',valcc_info:'💡 CC Ranking = CC Value (event) + Coach (group)',save_gear:'Save coach',save_att:'Save equipment',mode_equil:'Balanced',mode_top:'Top-heavy',mode_bal:'Optimal balanced',mode_desc_equil:'Balanced: A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy: A=top 4, then Balanced B/C · D=13-16',mode_desc_bal:'Optimal balanced: minimizes score gap between the 3 relays',relay:'Relay',relay_note1:'scoring',relay_note4:'safety',relay_free:'free',select_day:'Select day',player:'Player',level:'Level',rank_by_disc:'Ranking by event',score_cc:'CC Score',free1:'1st free',free2:'2nd free',admin_mode:'Admin mode — insert for',obl_label1:'Mandatory 1',obl_label2:'Mandatory 2',grp_sprint:'Sprint',grp_mid:'Mid dist.',grp_long:'Long dist.',grp_hurdles:'Hurdles',grp_jumps:'Jumps',grp_throws:'Throws',center_disc:'TRAINING CENTRE 🏟 BY EVENT',not_pub:'The message for {DAY} has not been published by the admin yet. Check later!',copy_msg:'📋 Copy full message',change_pwd:'🔐 Change password',pwd_desc:'Enter your current password and the new one.',pwd_old:'Current password',pwd_new:'New password',pwd_confirm:'Confirm new',pwd_btn:'Change password',fifth_sixth:'5th & 6th: free choice for the rest.',msg_staffette:'RELAYS',msg_libere_top:'RECOMMENDED FREE EVENTS',msg_altri:'RECOMMENDED FREE EVENTS FOR THE OTHERS',msg_1scelta:'1st choice',msg_2scelta:'2nd choice',msg_evitare:'Avoid',msg_note_top:'⭐ marks players who are also among the club\'s best overall, based on their average score across all events (gear + coach): it can change from week to week.',msg_copertura:'4th-string backup, no points gain',msg_note_cov:'🔧 marks a 4th backup player on an event already covered by the top 3: it adds no points (the game only counts the best 3), it is just a safety cushion in case one of the 3 starters underperforms in the actual match.'},fr:{tab_giorno:'📅 Jour CC',tab_msg:'📨 Message',tab_staff:'🏃 Relais',tab_rank:'📊 Classement',tab_insert:'✏️ Données CC',tab_inventario:'🎒 Inventaire',tab_trofei:'🏆 Trophées',tab_scambi:'🔄 Échanges',tab_guide:'❓ Guide',day1:'Lundi',day2:'Mardi',day3:'Mercredi',day4:'Jeudi',obl_day:'Épreuves obligatoires du jour',calc_btn:'Calculer et générer le message →',msg_empty:'Allez à l\'onglet "Jour CC" et appuyez sur Calculer.',trofei_title:'Trophées & Tendance hebdomadaire',trofei_player:'Joueur',trofei_pts:'Trophées',trofei_trend:'Tendance',trofei_100:'Dernier 100m',trofei_400:'Dernier 400m',trofei_insert:'Saisir les données trophées (admin uniquement)',trofei_save:'Enregistrer les trophées',trofei_no_data:'Aucune donnée disponible.',logout:'Déconnexion',loading:'Chargement...',error_conn:'Erreur de connexion. Réessayez.',error_pwd:'Mot de passe incorrect ou joueur introuvable.',error_sel:'Sélectionnez votre nom et entrez le mot de passe.',saved:'✓ Enregistré !',error_save:'Erreur lors de l\'enregistrement : ',no_week:'Aucune semaine active trouvée.',admin_for:'Vous saisissez des données pour :',obl_title:'Épreuves obligatoires de la semaine',obl_desc:'Saisissez les épreuves obligatoires assignées chaque jour.',gear_title:'Athlète 🔥, Entraîneur 💧 et Centre 🏟 par groupe',gear_desc:'Saisissez les valeurs affichées dans le jeu. Mettez à jour uniquement lors d\'une amélioration.',athlete:'Athlète 🔥',coach:'Entraîneur 💧',center:'Centre 🏟',valcc_title:'Valeur CC par épreuve',valcc_desc:'La valeur affichée par le jeu pour chaque épreuve. N\'incluez pas l\'entraîneur : ajoutez-le séparément ci-dessous. Se met à jour du vendredi au dimanche.',valcc_info:'💡 Classement CC = Valeur CC épreuve + Entraîneur du groupe',save_gear:'Enregistrer l\'entraîneur',save_att:'Enregistrer l\'équipement',mode_equil:'Équilibrées',mode_top:'Top-heavy',mode_bal:'Équilibre optimal',mode_desc_equil:'Équilibrées : A=1,6,7,12 · B=2,5,8,11 · C=3,4,9,10 · D=13-16',mode_desc_top:'Top-heavy : A=top 4, puis Équilibrées B/C · D=13-16',mode_desc_bal:'Équilibre optimal : minimise l\'écart Σscore entre les 3 grilles',relay:'Grille',relay_note1:'vise les points',relay_note4:'filet de sécurité',relay_free:'libre',select_day:'Sélectionner le jour',player:'Joueur',level:'Niveau',rank_by_disc:'Classement par épreuve',score_cc:'Score CC',free1:'1ère libre',free2:'2ème libre',admin_mode:'Mode admin — saisie pour',obl_label1:'Obligatoire 1',obl_label2:'Obligatoire 2',grp_sprint:'Sprint',grp_mid:'Demi-fond',grp_long:'Fond',grp_hurdles:'Haies',grp_jumps:'Sauts',grp_throws:'Lancers',center_disc:'CENTRE 🏟 PAR ÉPREUVE',not_pub:'Le message pour {DAY} n\'a pas encore été publié par l\'admin. Revenez plus tard !',copy_msg:'📋 Copier le message complet',change_pwd:'🔐 Changer le mot de passe',pwd_desc:'Entrez le mot de passe actuel et le nouveau.',pwd_old:'Mot de passe actuel',pwd_new:'Nouveau mot de passe',pwd_confirm:'Confirmer le nouveau',pwd_btn:'Changer le mot de passe',fifth_sixth:'5ème et 6ème : choix libre pour le reste.',msg_staffette:'RELAIS',msg_libere_top:'ÉPREUVES LIBRES CONSEILLÉES',msg_altri:'ÉPREUVES LIBRES CONSEILLÉES POUR LES AUTRES',msg_1scelta:'1er choix',msg_2scelta:'2ème choix',msg_evitare:'À éviter',msg_note_top:'⭐ indique les joueurs qui font aussi partie des meilleurs du classement général du club, calculé sur le score moyen de toutes les épreuves (équipement + entraîneur) : peut changer chaque semaine.',msg_copertura:'4ème de réserve, pas de gain de points',msg_note_cov:'🔧 indique un 4ème joueur de réserve sur une épreuve déjà couverte par les 3 premiers : n\'ajoute pas de points (le jeu ne compte que les 3 meilleurs), c\'est juste un filet de sécurité au cas où l\'un des 3 titulaires ferait moins bien que prévu en match.'}};
 function t(k){return(I18N[lang]||I18N.it)[k]||I18N.it[k]||k;}
+function L(it,en,fr){if(lang==='fr')return fr;if(lang==='en')return en;return it;} // selettore inline a 3 lingue, per i testi non gestiti da t()/I18N
 function bi(k){return I18N.it[k]+' / '+I18N.en[k];} // etichetta bilingue IT / EN, usata nel messaggio CC
-function toggleLang(){lang=lang==='it'?'en':'it';const btn=document.getElementById('lang-toggle');if(btn)btn.textContent=lang==='it'?'🌐 EN':'🌐 IT';const btnM=document.getElementById('lang-toggle-modal');if(btnM)btnM.textContent=lang==='it'?'🌐 EN':'🌐 IT';refreshAllUI();
+const LANG_CYCLE={it:'en',en:'fr',fr:'it'};
+const LANG_BTN_LABEL={it:'🌐 EN',en:'🌐 FR',fr:'🌐 IT'};
+function toggleLang(){lang=LANG_CYCLE[lang]||'it';const btn=document.getElementById('lang-toggle');if(btn)btn.textContent=LANG_BTN_LABEL[lang];const btnM=document.getElementById('lang-toggle-modal');if(btnM)btnM.textContent=LANG_BTN_LABEL[lang];refreshAllUI();
 }
 function refreshAllUI(){
   document.querySelectorAll('.tab').forEach(el=>{
@@ -489,7 +498,7 @@ function refreshAllUI(){
     if(i18nKey) el.textContent=t(i18nKey);
   });
   // Bottoni giorno
-  document.querySelectorAll('.day-btn').forEach((el,i)=>el.textContent=t('day'+(i+1)));
+  document.querySelectorAll('.day-btn').forEach(el=>el.textContent=t('day'+el.dataset.day));
   // Titoli statici nella UI
   const sd=document.getElementById('card-title-selday'); if(sd)sd.textContent=t('select_day');
   const od=document.getElementById('card-title-oblday'); if(od)od.textContent=t('obl_day');
@@ -501,10 +510,10 @@ function refreshAllUI(){
   if(document.getElementById('tab-trofei')&&document.getElementById('tab-trofei').style.display!=='none')renderTrofei();
   if(document.getElementById('tab-guida')&&document.getElementById('tab-guida').style.display!=='none')document.getElementById('guida-card-content').innerHTML=renderGuidaContent();
   if(document.getElementById('guide-modal-overlay')&&document.getElementById('guide-modal-overlay').style.display!=='none'){
-    document.getElementById('guide-modal-title').textContent = lang==='it' ? '👋 Benvenuto in Italy Team CC' : '👋 Welcome to Italy Team CC';
+    document.getElementById('guide-modal-title').textContent = L('👋 Benvenuto in Italy Team CC','👋 Welcome to Italy Team CC','👋 Bienvenue dans Italy Team CC');
     document.getElementById('guide-modal-body').innerHTML=renderGuidaContent();
-    document.getElementById('guide-modal-checkbox-label').textContent = lang==='it' ? 'Non mostrare più questa guida all\'accesso' : 'Don\'t show this guide on login again';
-    document.getElementById('guide-modal-close-btn').textContent = lang==='it' ? 'Ho capito, chiudi' : 'Got it, close';
+    document.getElementById('guide-modal-checkbox-label').textContent = L('Non mostrare più questa guida all\'accesso','Don\'t show this guide on login again','Ne plus afficher ce guide à la connexion');
+    document.getElementById('guide-modal-close-btn').textContent = L('Ho capito, chiudi','Got it, close','Compris, fermer');
   }
 }
 function GRP_NAMES(k){const m={'SR':t('grp_sprint'),'MR':t('grp_mid'),'LR':t('grp_long'),'H':t('grp_hurdles'),'J':t('grp_jumps'),'T':t('grp_throws')};return m[k]||k;}
@@ -640,7 +649,20 @@ async function loginSuccess() {
   renderInsertTab();
   populateDiscSelect();
   await checkShowGuideModal();
+  applyDeepLinkTab();
 }
+
+// Deep-linking generico: sergiocosi.github.io/italy/#messaggio (o #ranking,
+// #trofei, ecc.) apre direttamente quel tab, ma SOLO dopo il login — prima
+// l'hash viene ignorato e resta il tab di default (Giorno CC).
+const VALID_TABS=['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','scambi','guida'];
+function applyDeepLinkTab(){
+  const h=(location.hash||'').replace('#','').trim().toLowerCase();
+  if(VALID_TABS.includes(h)) showTab(h);
+}
+window.addEventListener('hashchange', ()=>{
+  if(document.getElementById('app-screen').style.display!=='none') applyDeepLinkTab();
+});
 
 // Guida al primo accesso: mostra il modale se il giocatore non ha ancora
 // scelto "non mostrare più". Query fresca su Supabase (vale per ogni dispositivo,
@@ -650,10 +672,10 @@ async function checkShowGuideModal() {
     const res = await sbGet('italy_players', `select=guida_vista&id=eq.${currentUser.id}`);
     const guidaVista = res && res[0] ? res[0].guida_vista : false;
     if (!guidaVista) {
-      document.getElementById('guide-modal-title').textContent = lang==='it' ? '👋 Benvenuto in Italy Team CC' : '👋 Welcome to Italy Team CC';
+      document.getElementById('guide-modal-title').textContent = L('👋 Benvenuto in Italy Team CC','👋 Welcome to Italy Team CC','👋 Bienvenue dans Italy Team CC');
       document.getElementById('guide-modal-body').innerHTML = renderGuidaContent();
-      document.getElementById('guide-modal-checkbox-label').textContent = lang==='it' ? 'Non mostrare più questa guida all\'accesso' : 'Don\'t show this guide on login again';
-      document.getElementById('guide-modal-close-btn').textContent = lang==='it' ? 'Ho capito, chiudi' : 'Got it, close';
+      document.getElementById('guide-modal-checkbox-label').textContent = L('Non mostrare più questa guida all\'accesso','Don\'t show this guide on login again','Ne plus afficher ce guide à la connexion');
+      document.getElementById('guide-modal-close-btn').textContent = L('Ho capito, chiudi','Got it, close','Compris, fermer');
       document.getElementById('guide-modal-overlay').style.display='flex';
     }
   } catch(e) {
@@ -901,6 +923,7 @@ function showTab(t){
   document.querySelectorAll('.tab').forEach(el=>{
     el.classList.toggle('active', el.dataset.tabkey===t);
   });
+  if(location.hash.replace('#','')!==t) history.replaceState(null,'','#'+t);
   if(t==='staffette') renderStaffette();
   if(t==='ranking') renderRankingTable();
   if(t==='trofei') renderTrofei();
@@ -913,8 +936,7 @@ function showTab(t){
 
 function setDay(d,btn){
   currentDay=d;
-  document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('.day-btn').forEach(b=>b.classList.toggle('active', Number(b.dataset.day)===d));
   renderOblSummary();
   if(document.getElementById('tab-messaggio').style.display!=='none') renderMessaggioTab();
 }
@@ -930,49 +952,55 @@ function setStaffMode(m,btn){
 
 // ── OBL SUMMARY ──────────────────────────────────────────────
 function renderGuidaContent(){
-  const it = lang==='it';
   const STEPS = [
     {
-      n:1, badge:'🔴', titleIt:'Obbligatorio — Inserisci Allenatore e Valore CC', titleEn:'Required — Enter Coach and CC Value',
+      n:1, badge:'🔴', titleIt:'Obbligatorio — Inserisci Allenatore e Valore CC', titleEn:'Required — Enter Coach and CC Value', titleFr:'Obligatoire — Entrez Entraîneur et Valeur CC',
       bodyIt:'Dal venerdì alla domenica, dopo aver ricevuto l\'attrezzatura CC, vai nel tab <strong>Dati CC</strong> e inserisci il <strong>Valore CC</strong> per ogni disciplina e il valore <strong>Allenatore</strong> per ogni gruppo di discipline. Sono i due dati che servono per calcolare i rank della settimana e capire quali sono le libere più convenienti.',
-      bodyEn:'From Friday to Sunday, after receiving the week\'s CC gear, go to the <strong>CC Data</strong> tab and enter the <strong>CC Value</strong> for each event and the <strong>Coach</strong> value for each event group. These two pieces of data are what gets used to calculate the weekly ranks and figure out the best free events.'
+      bodyEn:'From Friday to Sunday, after receiving the week\'s CC gear, go to the <strong>CC Data</strong> tab and enter the <strong>CC Value</strong> for each event and the <strong>Coach</strong> value for each event group. These two pieces of data are what gets used to calculate the weekly ranks and figure out the best free events.',
+      bodyFr:'Du vendredi au dimanche, après avoir reçu l\'équipement CC, allez dans l\'onglet <strong>Données CC</strong> et entrez la <strong>Valeur CC</strong> pour chaque épreuve et la valeur <strong>Entraîneur</strong> pour chaque groupe d\'épreuves. Ce sont les deux données nécessaires pour calculer les classements de la semaine et identifier les meilleures épreuves libres.'
     },
     {
-      n:2, badge:'🔴', titleIt:'Obbligatorio — Inserisci le discipline obbligatorie', titleEn:'Required — Enter the mandatory events',
+      n:2, badge:'🔴', titleIt:'Obbligatorio — Inserisci le discipline obbligatorie', titleEn:'Required — Enter the mandatory events', titleFr:'Obligatoire — Entrez les épreuves obligatoires',
       bodyIt:'Il lunedì apri l\'app e inserisci le due discipline obbligatorie assegnate dal gioco per ogni giornata del CC. Puoi inserirle nel tab <strong>Dati CC</strong>, sezione Obbligatorie. Salvale una volta sola — rimangono fino alla settimana successiva.',
-      bodyEn:'On Monday, open the app and enter the two mandatory events the game assigns for each CC day. You can enter them in the <strong>CC Data</strong> tab, Mandatory section. Save them once — they stay until the following week.'
+      bodyEn:'On Monday, open the app and enter the two mandatory events the game assigns for each CC day. You can enter them in the <strong>CC Data</strong> tab, Mandatory section. Save them once — they stay until the following week.',
+      bodyFr:'Le lundi, ouvrez l\'application et entrez les deux épreuves obligatoires assignées par le jeu pour chaque journée de CC. Vous pouvez les saisir dans l\'onglet <strong>Données CC</strong>, section Obligatoires. Enregistrez-les une seule fois — elles restent jusqu\'à la semaine suivante.'
     },
     {
-      n:3, badge:'🔵', titleIt:'Facoltativo — Guarda il messaggio del giorno', titleEn:'Optional — Check the daily message',
+      n:3, badge:'🔵', titleIt:'Facoltativo — Guarda il messaggio del giorno', titleEn:'Optional — Check the daily message', titleFr:'Facultatif — Consultez le message du jour',
       bodyIt:'L\'admin genera il messaggio giornaliero con le staffette e le libere consigliate, nel tab <strong>Giorno CC</strong>. Una volta pubblicato lo trovi nel tab <strong>Messaggio</strong> e puoi copiarlo su WhatsApp/Telegram con un click. Comodo per non perdersi nulla, ma non serve inserire nulla qui.',
-      bodyEn:'The admin generates the daily message with relays and recommended free events, in the <strong>CC Day</strong> tab. Once published, you\'ll find it in the <strong>Message</strong> tab and can copy it to WhatsApp/Telegram with one click. Handy so you don\'t miss anything, but there\'s nothing to enter here.'
+      bodyEn:'The admin generates the daily message with relays and recommended free events, in the <strong>CC Day</strong> tab. Once published, you\'ll find it in the <strong>Message</strong> tab and can copy it to WhatsApp/Telegram with one click. Handy so you don\'t miss anything, but there\'s nothing to enter here.',
+      bodyFr:'L\'admin génère le message quotidien avec les relais et les épreuves libres conseillées, dans l\'onglet <strong>Jour CC</strong>. Une fois publié, vous le trouvez dans l\'onglet <strong>Message</strong> et pouvez le copier sur WhatsApp/Telegram en un clic. Pratique pour ne rien manquer, mais rien à saisir ici.'
     },
     {
-      n:4, badge:'🔵', titleIt:'Facoltativo — Trofei e Personal Best', titleEn:'Optional — Trophies and Personal Bests',
+      n:4, badge:'🔵', titleIt:'Facoltativo — Trofei e Personal Best', titleEn:'Optional — Trophies and Personal Bests', titleFr:'Facultatif — Trophées et Records personnels',
       bodyIt:'Puoi aggiornare i tuoi <strong>trofei totali</strong> e i tuoi <strong>PB per disciplina</strong> (maschili e femminili) in qualsiasi momento, nel tab <strong>Trofei</strong> — i dati vengono salvati come bozza personale. Ogni settimana l\'admin pubblica uno <strong>snapshot ufficiale</strong> che cristallizza i valori per il calcolo del trend e della classifica. I tempi si inseriscono nel formato <strong>10.45</strong> oppure <strong>1:45.23</strong> oppure <strong>2:10:45</strong> · le distanze in metri: <strong>7.23</strong>. Utile per le statistiche del club, ma non influenza le staffette.',
-      bodyEn:'You can update your <strong>total trophies</strong> and your <strong>PBs per event</strong> (men\'s and women\'s) at any time, in the <strong>Trophies</strong> tab — the data is saved as a personal draft. Each week the admin publishes an <strong>official snapshot</strong> that locks in the values for trend and ranking calculations. Enter times as <strong>10.45</strong> or <strong>1:45.23</strong> or <strong>2:10:45</strong> · distances in meters: <strong>7.23</strong>. Useful for club stats, but doesn\'t affect relays.'
+      bodyEn:'You can update your <strong>total trophies</strong> and your <strong>PBs per event</strong> (men\'s and women\'s) at any time, in the <strong>Trophies</strong> tab — the data is saved as a personal draft. Each week the admin publishes an <strong>official snapshot</strong> that locks in the values for trend and ranking calculations. Enter times as <strong>10.45</strong> or <strong>1:45.23</strong> or <strong>2:10:45</strong> · distances in meters: <strong>7.23</strong>. Useful for club stats, but doesn\'t affect relays.',
+      bodyFr:'Vous pouvez mettre à jour vos <strong>trophées totaux</strong> et vos <strong>records par épreuve</strong> (hommes et femmes) à tout moment, dans l\'onglet <strong>Trophées</strong> — les données sont enregistrées comme brouillon personnel. Chaque semaine, l\'admin publie un <strong>instantané officiel</strong> qui fige les valeurs pour le calcul de la tendance et du classement. Les temps se saisissent au format <strong>10.45</strong> ou <strong>1:45.23</strong> ou <strong>2:10:45</strong> · les distances en mètres : <strong>7.23</strong>. Utile pour les statistiques du club, mais sans effet sur les relais.'
     },
     {
-      n:5, badge:'🔵', titleIt:'Facoltativo — Scambi tra giocatori', titleEn:'Optional — Trading between players',
+      n:5, badge:'🔵', titleIt:'Facoltativo — Scambi tra giocatori', titleEn:'Optional — Trading between players', titleFr:'Facultatif — Échanges entre joueurs',
       bodyIt:'Nel tab <strong>Scambi</strong> puoi pubblicare le carte che ti servono o che hai in più, e vedere le inserzioni degli altri membri del club. Utile per accelerare gli upgrade, ma non obbligatorio.',
-      bodyEn:'In the <strong>Trades</strong> tab you can post cards you need or have spare, and see other club members\' listings. Useful for speeding up upgrades, but not required.'
+      bodyEn:'In the <strong>Trades</strong> tab you can post cards you need or have spare, and see other club members\' listings. Useful for speeding up upgrades, but not required.',
+      bodyFr:'Dans l\'onglet <strong>Échanges</strong>, vous pouvez publier les cartes dont vous avez besoin ou celles en trop, et voir les annonces des autres membres du club. Utile pour accélérer les améliorations, mais pas obligatoire.'
     }
   ];
 
-  let h = `<div class="card-title">${it?'Come usare questa app':'How to use this app'}</div>
+  let h = `<div class="card-title">${L('Come usare questa app','How to use this app','Comment utiliser cette application')}</div>
 
     <div class="alert a-info" style="margin-bottom:18px;font-size:13px;line-height:1.5">
-      💡 <strong>${it?'In sintesi:':'In short:'}</strong> ${it
-        ? 'gli unici dati davvero necessari al gioco sono <strong>Allenatore + Valore CC</strong> (tab Dati CC) e le <strong>Obbligatorie</strong>. Tutto il resto — Trofei, PB, Scambi — è utile per le statistiche del club ma non incide sul calcolo delle staffette.'
-        : 'the only data the game actually needs is <strong>Coach + CC Value</strong> (CC Data tab) and the <strong>Mandatory events</strong>. Everything else — Trophies, PBs, Trading — is useful for club stats but doesn\'t affect relay calculations.'}
+      💡 <strong>${L('In sintesi:','In short:','En bref :')}</strong> ${L(
+        'gli unici dati davvero necessari al gioco sono <strong>Allenatore + Valore CC</strong> (tab Dati CC) e le <strong>Obbligatorie</strong>. Tutto il resto — Trofei, PB, Scambi — è utile per le statistiche del club ma non incide sul calcolo delle staffette.',
+        'the only data the game actually needs is <strong>Coach + CC Value</strong> (CC Data tab) and the <strong>Mandatory events</strong>. Everything else — Trophies, PBs, Trading — is useful for club stats but doesn\'t affect relay calculations.',
+        'les seules données réellement nécessaires au jeu sont <strong>Entraîneur + Valeur CC</strong> (onglet Données CC) et les <strong>Obligatoires</strong>. Tout le reste — Trophées, records, Échanges — est utile pour les statistiques du club mais n\'influence pas le calcul des relais.'
+      )}
     </div>`;
 
   STEPS.forEach(s=>{
     h += `<div class="guide-step">
       <div class="guide-num">${s.n}</div>
       <div class="guide-body">
-        <div class="guide-title">${s.badge} ${it?s.titleIt:s.titleEn}</div>
-        <p>${it?s.bodyIt:s.bodyEn}</p>
+        <div class="guide-title">${s.badge} ${L(s.titleIt,s.titleEn,s.titleFr)}</div>
+        <p>${L(s.bodyIt,s.bodyEn,s.bodyFr)}</p>
       </div>
     </div>`;
   });
@@ -980,12 +1008,12 @@ function renderGuidaContent(){
   h += `<div class="guide-step">
     <div class="guide-num">6</div>
     <div class="guide-body">
-      <div class="guide-title">${it?'Come leggere i rank colorati':'How to read the colored ranks'}</div>
+      <div class="guide-title">${L('Come leggere i rank colorati','How to read the colored ranks','Comment lire les classements colorés')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">
-        <span><span class="rp r1">1</span> ${it?'Top 3 — punti sicuri':'Top 3 — safe points'}</span>
-        <span><span class="rp r2">5</span> ${it?'Top 4-6 — competitivo':'Top 4-6 — competitive'}</span>
-        <span><span class="rp r3">8</span> ${it?'Top 7-10 — possibile':'Top 7-10 — possible'}</span>
-        <span><span class="rp r4">15</span> ${it?'Oltre 10 — difficile':'Beyond 10 — difficult'}</span>
+        <span><span class="rp r1">1</span> ${L('Top 3 — punti sicuri','Top 3 — safe points','Top 3 — points assurés')}</span>
+        <span><span class="rp r2">5</span> ${L('Top 4-6 — competitivo','Top 4-6 — competitive','Top 4-6 — compétitif')}</span>
+        <span><span class="rp r3">8</span> ${L('Top 7-10 — possibile','Top 7-10 — possible','Top 7-10 — possible')}</span>
+        <span><span class="rp r4">15</span> ${L('Oltre 10 — difficile','Beyond 10 — difficult','Au-delà de 10 — difficile')}</span>
       </div>
     </div>
   </div>
@@ -993,10 +1021,12 @@ function renderGuidaContent(){
   <div class="guide-step" style="border-bottom:none">
     <div class="guide-num" style="background:var(--goldlt);color:var(--gold)">★</div>
     <div class="guide-body">
-      <div class="guide-title">${it?'Password e accesso':'Password and access'}</div>
-      <p>${it
-        ? 'Seleziona il tuo nome dalla lista e inserisci la tua password. Puoi cambiarla in qualsiasi momento dal tab <strong>Dati CC</strong>, in fondo alla pagina. L\'admin può inserire e modificare dati per conto di qualsiasi giocatore selezionandolo dal menu in cima ad ogni sezione.'
-        : 'Select your name from the list and enter your password. You can change it any time from the <strong>CC Data</strong> tab, at the bottom of the page. The admin can enter and edit data on behalf of any player by selecting them from the menu at the top of each section.'}</p>
+      <div class="guide-title">${L('Password e accesso','Password and access','Mot de passe et accès')}</div>
+      <p>${L(
+        'Seleziona il tuo nome dalla lista e inserisci la tua password. Puoi cambiarla in qualsiasi momento dal tab <strong>Dati CC</strong>, in fondo alla pagina. L\'admin può inserire e modificare dati per conto di qualsiasi giocatore selezionandolo dal menu in cima ad ogni sezione.',
+        'Select your name from the list and enter your password. You can change it any time from the <strong>CC Data</strong> tab, at the bottom of the page. The admin can enter and edit data on behalf of any player by selecting them from the menu at the top of each section.',
+        'Sélectionnez votre nom dans la liste et entrez votre mot de passe. Vous pouvez le changer à tout moment depuis l\'onglet <strong>Données CC</strong>, en bas de page. L\'admin peut saisir et modifier les données pour le compte de n\'importe quel joueur en le sélectionnant dans le menu en haut de chaque section.'
+      )}</p>
     </div>
   </div>`;
 
@@ -1832,11 +1862,9 @@ function renderInsertTab(){
   // ── ALLENATORE PER GRUPPO (ridondanza comoda, stessi dati dell'Inventario) ──
   const invForCoach = inventoryData[targetPlayer] || {};
   h+=`<div class="card">
-    <div class="card-title">💧 ${lang==='it'?'Allenatore per gruppo':'Coach by group'}</div>
+    <div class="card-title">💧 ${L('Allenatore per gruppo','Coach by group','Entraîneur par groupe')}</div>
     <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
-      ${lang==='it'
-        ? 'Stesso dato del tab Inventario, ripetuto qui per comodità. Inserisci livello e valore allenatore per ogni gruppo di discipline.'
-        : 'Same data as the Inventory tab, repeated here for convenience. Enter coach level and value for each event group.'}
+      ${L('Stesso dato del tab Inventario, ripetuto qui per comodità. Inserisci livello e valore allenatore per ogni gruppo di discipline.','Same data as the Inventory tab, repeated here for convenience. Enter coach level and value for each event group.','Mêmes données que l\'onglet Inventaire, répétées ici par commodité. Entrez le niveau et la valeur de l\'entraîneur pour chaque groupe d\'épreuves.')}
     </p>
     <div class="inv-grid">`;
   INV_GROUPS.forEach(g=>{
@@ -1844,13 +1872,13 @@ function renderInsertTab(){
   });
   h+=`</div>
     <button class="btn-primary-sm" onclick="saveCoachFromInsert('${targetPlayer}')">${t('save_gear')}</button>
-    <span id="inv2-save-coach" style="margin-left:10px;font-size:12px;color:var(--green);display:none">✓ ${lang==='it'?'Salvato!':'Saved!'}</span>
+    <span id="inv2-save-coach" style="margin-left:10px;font-size:12px;color:var(--green);display:none">✓ ${L('Salvato!','Saved!','Enregistré !')}</span>
   </div>`;
 
   // ── OBBLIGATORIE ──────────────────────────────────────────
   h+=`<div class="card">
     <div class="card-title">${t('obl_title')}</div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:14px">${t('obl_desc')} ${lang==='it'?'Salva una volta sola — rimangono fino alla settimana successiva.':'Save once — they persist until the next week.'}</p>`;
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px">${t('obl_desc')} ${L('Salva una volta sola — rimangono fino alla settimana successiva.','Save once — they persist until the next week.','Enregistrez une seule fois — elles restent jusqu\'à la semaine suivante.')}</p>`;
 
   const currentObl={};
   for(let d=1;d<=4;d++){
@@ -1880,7 +1908,7 @@ function renderInsertTab(){
       </div>
     </div>`;
   }
-  h+=`<button class="btn-primary-sm" onclick="saveObbligatorie()">${lang==='it'?'Salva obbligatorie':'Save mandatory events'}</button>
+  h+=`<button class="btn-primary-sm" onclick="saveObbligatorie()">${L('Salva obbligatorie','Save mandatory events','Enregistrer les obligatoires')}</button>
     <span id="obl-save-msg" style="margin-left:10px;font-size:12px;color:var(--green);display:none">${t('saved')}</span>
   </div>`;
 
@@ -2126,7 +2154,7 @@ async function renderTrofei(){
         style="font-size:13px;padding:7px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);min-width:220px">
         ${(window.allWeeks||[]).map(w=>`<option value="${w.id}"${w.id===selWeekId?' selected':''}>${w.label}</option>`).join('')}
       </select>
-      <span style="font-size:11px;color:var(--text3)">← ${lang==='it'?'storico settimane':'weekly history'}</span>
+      <span style="font-size:11px;color:var(--text3)">← ${L('storico settimane','weekly history','historique des semaines')}</span>
     </div>`;
 
   if(!hasCurrent){
@@ -2155,7 +2183,7 @@ async function renderTrofei(){
 
   // ── 2. I MIEI DATI (trofei + PB) — tutti i giocatori ────────
   h+=`<div class="card">
-    <div class="card-title">${lang==='it'?'✏️ Aggiorna i miei dati':'✏️ Update my data'}</div>`;
+    <div class="card-title">${L('✏️ Aggiorna i miei dati','✏️ Update my data','✏️ Mettre à jour mes données')}</div>`;
 
   // Admin selector
   if(isAdmin){
@@ -2172,15 +2200,15 @@ async function renderTrofei(){
   // Trofei count
   h+=`<div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap">
     <div class="input-group" style="min-width:160px">
-      <label style="font-size:12px">🏆 ${t('trofei_pts')} ${lang==='it'?'totali':'total'}</label>
+      <label style="font-size:12px">🏆 ${t('trofei_pts')} ${L('totali','total','totaux')}</label>
       <input type="number" id="my_trofei" value="${myDraft.trofei!=null?myDraft.trofei:''}" placeholder="es. 195000"
         style="font-size:15px;padding:8px 10px;border:1.5px solid var(--border2);border-radius:var(--radius);width:100%">
     </div>
-    <span style="font-size:11px;color:var(--text3);padding-bottom:8px">${lang==='it'?'Aggiorna ogni volta che cambia.':'Update whenever it changes.'}</span>
+    <span style="font-size:11px;color:var(--text3);padding-bottom:8px">${L('Aggiorna ogni volta che cambia.','Update whenever it changes.','Mettez à jour à chaque changement.')}</span>
   </div>`;
 
   // PB per gruppo: riga M + riga F
-  h+=`<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;font-family:var(--mono)">${lang==='it'?'PERSONAL BEST — per disciplina':'PERSONAL BESTS — by event'}</div>`;
+  h+=`<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:10px;font-family:var(--mono)">${L('PERSONAL BEST — per disciplina','PERSONAL BESTS — by event','MEILLEURES PERFORMANCES — par épreuve')}</div>`;
 
   pbGroups().forEach(({key,label,discs})=>{
     h+=`<div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1.5px solid var(--bg3)">
@@ -2197,16 +2225,16 @@ async function renderTrofei(){
   });
 
   h+=`<p style="font-size:11px;color:var(--text3);margin-bottom:12px">
-    ${lang==='it'?'💡 Inserisci i tempi come <strong>10.45</strong> o <strong>1:45.23</strong> · le distanze come <strong>7.23</strong> · lascia vuoto se non hai PB.':'💡 Enter times as <strong>10.45</strong> or <strong>1:45.23</strong> · distances as <strong>7.23</strong> · leave blank if no PB.'}
+    ${L('💡 Inserisci i tempi come <strong>10.45</strong> o <strong>1:45.23</strong> · le distanze come <strong>7.23</strong> · lascia vuoto se non hai PB.','💡 Enter times as <strong>10.45</strong> or <strong>1:45.23</strong> · distances as <strong>7.23</strong> · leave blank if no PB.','💡 Entrez les temps comme <strong>10.45</strong> ou <strong>1:45.23</strong> · les distances comme <strong>7.23</strong> · laissez vide si vous n\'avez pas de record.')}
   </p>
-  <button class="btn-primary-sm" onclick="savePBs()">${lang==='it'?'Salva trofei & PB':'Save trophies & PBs'}</button>
+  <button class="btn-primary-sm" onclick="savePBs()">${L('Salva trofei & PB','Save trophies & PBs','Enregistrer trophées & records')}</button>
   <span id="pb-save-msg" style="margin-left:10px;font-size:12px;color:var(--green);display:none">${t('saved')}</span>
   ${isAdmin?`<div style="margin-top:18px;padding-top:14px;border-top:1.5px solid var(--bg3)">
     <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
-      ${lang==='it'?'📸 <strong>Snapshot settimanale</strong> — cristallizza i dati di tutti i giocatori come valori ufficiali della settimana corrente. Usalo una volta a settimana, nel momento che ritieni più opportuno.':'📸 <strong>Weekly snapshot</strong> — locks all players\' current draft data as official values for the current week. Use once a week at the right moment.'}
+      ${L('📸 <strong>Snapshot settimanale</strong> — cristallizza i dati di tutti i giocatori come valori ufficiali della settimana corrente. Usalo una volta a settimana, nel momento che ritieni più opportuno.','📸 <strong>Weekly snapshot</strong> — locks all players\' current draft data as official values for the current week. Use once a week at the right moment.','📸 <strong>Instantané hebdomadaire</strong> — fige les données de tous les joueurs comme valeurs officielles de la semaine en cours. À utiliser une fois par semaine, au moment jugé le plus opportun.')}
     </p>
     <button onclick="publishSnapshot()" style="background:var(--gold);color:#fff;border:none;border-radius:var(--radius);padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer">
-      📸 ${lang==='it'?'Pubblica snapshot settimanale':'Publish weekly snapshot'}
+      📸 ${L('Pubblica snapshot settimanale','Publish weekly snapshot','Publier l\'instantané hebdomadaire')}
     </button>
     <span id="snapshot-msg" style="margin-left:10px;font-size:12px;display:none"></span>
   </div>`:''}
@@ -2218,7 +2246,7 @@ async function renderTrofei(){
   const isFld  = FIELD_EVENTS.has(pbDisc);
 
   h+=`<div class="card">
-    <div class="card-title">${lang==='it'?'🏅 Classifica PB':'🏅 PB Rankings'}</div>
+    <div class="card-title">${L('🏅 Classifica PB','🏅 PB Rankings','🏅 Classement des records')}</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
       <select id="pb-disc-sel" onchange="window.pbViewDisc=this.value;renderTrofei()"
         style="font-size:13px;padding:7px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2)">
@@ -2230,7 +2258,7 @@ async function renderTrofei(){
         <button onclick="window.pbViewGender='F';renderTrofei()"
           style="padding:7px 16px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:${pbGen==='F'?'#c0002a':'var(--bg2)'};color:${pbGen==='F'?'#fff':'var(--text2)'}">🔴 F</button>
       </div>
-      <span style="font-size:12px;color:var(--text3)">${pbLabel(pbDisc,pbGen)} — ${isFld?(lang==='it'?'più è meglio':'higher is better'):(lang==='it'?'meno è meglio':'lower is better')}</span>
+      <span style="font-size:12px;color:var(--text3)">${pbLabel(pbDisc,pbGen)} — ${isFld?(L('più è meglio','higher is better','plus c\'est mieux')):(L('meno è meglio','lower is better','moins c\'est mieux'))}</span>
     </div>`;
 
   const pbCol = PB_COL[pbGen][pbDisc];
@@ -2245,8 +2273,8 @@ async function renderTrofei(){
     h+=`<div style="overflow-x:auto"><table>
       <thead><tr>
         <th>#</th><th>${t('trofei_player')}</th>
-        <th>${lang==='it'?'Settimana corrente':'Current week'}</th>
-        <th>${lang==='it'?'Settimana prec.':'Prev. week'}</th>
+        <th>${L('Settimana corrente','Current week','Semaine en cours')}</th>
+        <th>${L('Settimana prec.','Prev. week','Semaine préc.')}</th>
         <th>${t('trofei_trend')}</th>
       </tr></thead><tbody>`;
     ranked.forEach(({p,cur,prv},i)=>{
@@ -2336,11 +2364,11 @@ async function publishSnapshot(){
   if(!weekData){alert(t('no_week'));return;}
   if(!isAdmin){return;}
   const msg=document.getElementById('snapshot-msg');
-  const label=lang==='it'?'Confermi la pubblicazione dello snapshot per tutti i giocatori? I dati correnti saranno cristallizzati come valori ufficiali della settimana.':'Confirm publishing the snapshot for all players? Current draft data will be locked as official values for this week.';
+  const label=L('Confermi la pubblicazione dello snapshot per tutti i giocatori? I dati correnti saranno cristallizzati come valori ufficiali della settimana.','Confirm publishing the snapshot for all players? Current draft data will be locked as official values for this week.','Confirmez-vous la publication de l\'instantané pour tous les joueurs ? Les données actuelles seront figées comme valeurs officielles de la semaine.');
   if(!confirm(label)) return;
 
   msg.style.display='inline'; msg.style.color='var(--text2)';
-  msg.textContent=lang==='it'?'Pubblicazione in corso...':'Publishing...';
+  msg.textContent=L('Pubblicazione in corso...','Publishing...','Publication en cours...');
 
   let saved=0, errors=0;
   const players=allPlayers.filter(p=>p.active!==false);
@@ -2367,10 +2395,10 @@ async function publishSnapshot(){
 
   if(errors===0){
     msg.style.color='var(--green)';
-    msg.textContent=`✓ ${lang==='it'?'Snapshot pubblicato per':'Snapshot published for'} ${saved} ${lang==='it'?'giocatori':'players'}`;
+    msg.textContent=`✓ ${L('Snapshot pubblicato per','Snapshot published for','Instantané publié pour')} ${saved} ${L('giocatori','players','joueurs')}`;
   } else {
     msg.style.color='var(--red)';
-    msg.textContent=`${saved} OK, ${errors} ${lang==='it'?'errori':'errors'}`;
+    msg.textContent=`${saved} OK, ${errors} ${L('errori','errors','erreurs')}`;
   }
   setTimeout(()=>{msg.style.display='none';},5000);
   renderTrofei();
@@ -2646,7 +2674,7 @@ async function saveCoachFromInsert(targetPlayer) {
     msg.style.display = 'inline';
     setTimeout(() => msg.style.display = 'none', 3000);
   } catch(e) {
-    alert((lang==='it'?'Errore nel salvataggio: ':'Save error: ')+e.message);
+    alert((L('Errore nel salvataggio: ','Save error: ','Erreur lors de l\'enregistrement : '))+e.message);
   }
 }
 
@@ -2668,7 +2696,7 @@ function renderInventarioTab() {
           <option value="">— me stesso (${currentUser.name}) —</option>
           ${allPlayers.filter(p=>p.id!==currentUser.id&&p.active!==false).map(p=>`<option value="${p.id}"${adminActingAs===p.id?' selected':''}>${p.name}</option>`).join('')}
         </select>
-        <span style="font-size:12px;color:var(--text3)">${lang==='it'?'Stai inserendo dati per':'Inserting data for'}: <strong>${targetName}</strong></span>
+        <span style="font-size:12px;color:var(--text3)">${L('Stai inserendo dati per','Inserting data for','Vous saisissez des données pour')}: <strong>${targetName}</strong></span>
       </div>
     </div>`;
   }
@@ -2683,8 +2711,8 @@ function renderInventarioTab() {
       <div class="coll-body" id="coll-body-${id}">
         ${bodyHTML}
         <div style="margin-top:14px">
-          <button class="btn-primary-sm" onclick="saveInventory('${saveKey}','${targetPlayer}')">${lang==='it'?'Salva':'Save'}</button>
-          <span id="inv-save-${saveKey}" style="margin-left:10px;font-size:12px;color:var(--green);display:none">✓ ${lang==='it'?'Salvato!':'Saved!'}</span>
+          <button class="btn-primary-sm" onclick="saveInventory('${saveKey}','${targetPlayer}')">${L('Salva','Save','Enregistrer')}</button>
+          <span id="inv-save-${saveKey}" style="margin-left:10px;font-size:12px;color:var(--green);display:none">✓ ${L('Salvato!','Saved!','Enregistré !')}</span>
         </div>
       </div>
     </div>`;
@@ -2692,10 +2720,10 @@ function renderInventarioTab() {
 
   // 0. RISORSE
   const risorseItems = [
-    { key: 'monete', label: lang==='it' ? '🪙 Monete'        : '🪙 Coins'         },
-    { key: 'gemme',  label: lang==='it' ? '💎 Gemme'         : '💎 Gems'          },
-    { key: 'ac',     label: lang==='it' ? '⚡ Action Points' : '⚡ Action Points' },
-    { key: 'ct',     label: lang==='it' ? '🎫 Card Token'    : '🎫 Card Token'    },
+    { key: 'monete', label: L('🪙 Monete','🪙 Coins','🪙 Pièces')         },
+    { key: 'gemme',  label: L('💎 Gemme','💎 Gems','💎 Gemmes')          },
+    { key: 'ac',     label: L('⚡ Action Points','⚡ Action Points','⚡ Points d\'action') },
+    { key: 'ct',     label: L('🎫 Card Token','🎫 Card Token','🎫 Jetons de carte')    },
   ];
   let risorseHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:4px 0">`;
   risorseItems.forEach(({key, label}) => {
@@ -2710,7 +2738,7 @@ function renderInventarioTab() {
     </div>`;
   });
   risorseHTML += '</div>';
-  h += collCard('risorse', '💰', lang==='it' ? 'Risorse' : 'Resources', risorseHTML, 'risorse');
+  h += collCard('risorse', '💰', L('Risorse','Resources','Ressources'), risorseHTML, 'risorse');
 
   // 1. ALLENATORI
   let coachHTML = `<div class="inv-grid">`;
@@ -2718,43 +2746,43 @@ function renderInventarioTab() {
     coachHTML += invPair('coach_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100, 'coach');
   });
   coachHTML += '</div>';
-  h += collCard('coach', '💧', lang==='it'?'Allenatori':'Coaches', coachHTML, 'coach');
+  h += collCard('coach', '💧', L('Allenatori','Coaches','Entraîneurs'), coachHTML, 'coach');
 
   // 2. ATLETI M
   let athlMHTML = `<div class="inv-grid">`;
-  athlMHTML += invPair('athlete_m_dec', lang==='it'?'Decatleta':'Decathlete', inv, 100, 'universale');
+  athlMHTML += invPair('athlete_m_dec', L('Decatleta','Decathlete','Décathlonien'), inv, 100, 'universale');
   INV_GROUPS.forEach(g => {
     athlMHTML += invPair('athlete_m_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100, 'atleta');
   });
   athlMHTML += '</div>';
-  h += collCard('athlm', '🔥', lang==='it'?'Atleti — Uomini':'Athletes — Men', athlMHTML, 'athlm');
+  h += collCard('athlm', '🔥', L('Atleti — Uomini','Athletes — Men','Athlètes — Hommes'), athlMHTML, 'athlm');
 
   // 3. ATLETI F
   let athlFHTML = `<div class="inv-grid">`;
-  athlFHTML += invPair('athlete_f_hep', lang==='it'?'Eptatleta':'Heptathlete', inv, 100, 'universale');
+  athlFHTML += invPair('athlete_f_hep', L('Eptatleta','Heptathlete','Heptathlonienne'), inv, 100, 'universale');
   INV_GROUPS.forEach(g => {
     athlFHTML += invPair('athlete_f_'+g.key, g.key.toUpperCase()+' — '+g.label(), inv, 100, 'atleta');
   });
   athlFHTML += '</div>';
-  h += collCard('athlf', '🔥', lang==='it'?'Atleti — Donne':'Athletes — Women', athlFHTML, 'athlf');
+  h += collCard('athlf', '🔥', L('Atleti — Donne','Athletes — Women','Athlètes — Femmes'), athlFHTML, 'athlf');
 
   // 4. CENTRO M
   let cenMHTML = `<div class="inv-grid">`;
   DISC_KEYS.forEach(dk => { cenMHTML += invPair('center_m_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenMHTML += '</div>';
-  h += collCard('cenm', '🏟', lang==='it'?'Centro Allenamento — Uomini':'Training Centre — Men', cenMHTML, 'cenm');
+  h += collCard('cenm', '🏟', L('Centro Allenamento — Uomini','Training Centre — Men','Centre d\'entraînement — Hommes'), cenMHTML, 'cenm');
 
   // 5. CENTRO F
   let cenFHTML = `<div class="inv-grid">`;
   DISC_KEYS.forEach(dk => { cenFHTML += invPair('center_f_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenFHTML += '</div>';
-  h += collCard('cenf', '🏟', lang==='it'?'Centro Allenamento — Donne':'Training Centre — Women', cenFHTML, 'cenf');
+  h += collCard('cenf', '🏟', L('Centro Allenamento — Donne','Training Centre — Women','Centre d\'entraînement — Femmes'), cenFHTML, 'cenf');
 
   // 6. ATTREZZATURA M
   const gearPieces = [
-    {key:'jersey',  label:lang==='it'?'Maglia':'Jersey'},
-    {key:'shorts',  label:lang==='it'?'Pantaloni':'Shorts'},
-    {key:'shoes',   label:lang==='it'?'Scarpe':'Shoes'},
+    {key:'jersey',  label:L('Maglia','Jersey','Maillot')},
+    {key:'shorts',  label:L('Pantaloni','Shorts','Short')},
+    {key:'shoes',   label:L('Scarpe','Shoes','Chaussures')},
   ];
   let gearMHTML = '';
   gearPieces.forEach(({key,label}) => {
@@ -2762,7 +2790,7 @@ function renderInventarioTab() {
     DISC_KEYS.forEach(dk => { gearMHTML += invPair(key+'_m_'+dk, DISC_LABELS[dk], inv, 10); });
     gearMHTML += '</div>';
   });
-  h += collCard('gearm', '👕', lang==='it'?'Attrezzatura — Uomini':'Equipment — Men', gearMHTML, 'gearm');
+  h += collCard('gearm', '👕', L('Attrezzatura — Uomini','Equipment — Men','Équipement — Hommes'), gearMHTML, 'gearm');
 
   // 7. ATTREZZATURA F
   let gearFHTML = '';
@@ -2771,21 +2799,21 @@ function renderInventarioTab() {
     DISC_KEYS.forEach(dk => { gearFHTML += invPair(key+'_f_'+dk, DISC_LABELS[dk], inv, 10); });
     gearFHTML += '</div>';
   });
-  h += collCard('gearf', '👕', lang==='it'?'Attrezzatura — Donne':'Equipment — Women', gearFHTML, 'gearf');
+  h += collCard('gearf', '👕', L('Attrezzatura — Donne','Equipment — Women','Équipement — Femmes'), gearFHTML, 'gearf');
 
   // PROGRESSIONE UPGRADE
   h += `<div id="prog-wrap">${renderProgressioneCard(targetPlayer)}</div>`;
 
   // BOTTONE EXPORT
   h += `<div style="margin-bottom:20px;padding:14px 18px;background:var(--bg2);border-radius:var(--radius2);box-shadow:var(--shadow)">
-    <div style="font-size:13px;font-weight:700;margin-bottom:3px">📤 ${lang==='it'?'Esporta i miei dati':'Export my data'}</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${lang==='it'?`Esporta l'inventario completo di <strong>${targetName}</strong> in formato JSON.`:`Export the full inventory of <strong>${targetName}</strong> as JSON.`}</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:3px">📤 ${L('Esporta i miei dati','Export my data','Exporter mes données')}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${L(`Esporta l'inventario completo di <strong>${targetName}</strong> in formato JSON.`,`Export the full inventory of <strong>${targetName}</strong> as JSON.`,`Exporte l'inventaire complet de <strong>${targetName}</strong> au format JSON.`)}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="exportMyData('clipboard')" style="padding:8px 16px;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;border:none;border-radius:var(--radius);background:var(--royal);color:#fff;-webkit-appearance:none">
-        📋 ${lang==='it'?'Copia negli appunti':'Copy to clipboard'}
+        📋 ${L('Copia negli appunti','Copy to clipboard','Copier dans le presse-papiers')}
       </button>
       <button onclick="exportMyData('download')" style="padding:8px 16px;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);-webkit-appearance:none">
-        💾 ${lang==='it'?'Scarica file JSON':'Download JSON file'}
+        💾 ${L('Scarica file JSON','Download JSON file','Télécharger le fichier JSON')}
       </button>
     </div>
   </div>`;
@@ -2853,7 +2881,7 @@ async function saveInventory(section, targetPlayer) {
     msg.style.display = 'inline';
     setTimeout(() => msg.style.display = 'none', 3000);
   } catch(e) {
-    alert((lang==='it'?'Errore nel salvataggio: ':'Save error: ')+e.message);
+    alert((L('Errore nel salvataggio: ','Save error: ','Erreur lors de l\'enregistrement : '))+e.message);
   }
 }
 
@@ -2877,10 +2905,10 @@ function playerName(pid) {
 function scambiLabel(row) {
   let s = '';
   if (row.categoria === 'allenatore') {
-    s = (lang==='it'?'Allenatore':'Coach') + ' ' + row.gruppo;
+    s = (L('Allenatore','Coach','Entraîneur')) + ' ' + row.gruppo;
   } else {
-    const gen = row.genere==='U' ? (lang==='it'?'Uomo':'Man') : (lang==='it'?'Donna':'Woman');
-    s = (lang==='it'?'Atleta':'Athlete') + ' ' + gen + ' ' + row.gruppo;
+    const gen = row.genere==='U' ? (L('Uomo','Man','Homme')) : (L('Donna','Woman','Femme'));
+    s = (L('Atleta','Athlete','Athlète')) + ' ' + gen + ' ' + row.gruppo;
     if (row.nome_carta) s += ' — ' + row.nome_carta;
   }
   if (row.note) s += ' (' + row.note + ')';
@@ -2947,45 +2975,45 @@ function buildScambiHTML() {
     <div class="scambi-match-alert" id="scambi-match-alert"></div>
     <div class="scambi-form">
       <div>
-        <label>${lang==='it'?'Tipo':'Type'}</label>
+        <label>${L('Tipo','Type','Type')}</label>
         <select id="sc-tipo" onchange="onScambiFormChange()">
-          <option value="offro">${lang==='it'?'Offro':'I offer'}</option>
-          <option value="cerco">${lang==='it'?'Cerco':'I need'}</option>
+          <option value="offro">${L('Offro','I offer','J\'offre')}</option>
+          <option value="cerco">${L('Cerco','I need','Je cherche')}</option>
         </select>
       </div>
       <div>
-        <label>${lang==='it'?'Categoria':'Category'}</label>
+        <label>${L('Categoria','Category','Catégorie')}</label>
         <select id="sc-cat" onchange="onScambiFormChange()">
-          <option value="atleta">${lang==='it'?'Atleta':'Athlete'}</option>
-          <option value="allenatore">${lang==='it'?'Allenatore':'Coach'}</option>
+          <option value="atleta">${L('Atleta','Athlete','Athlète')}</option>
+          <option value="allenatore">${L('Allenatore','Coach','Entraîneur')}</option>
         </select>
       </div>
       <div id="sc-genere-wrap">
-        <label>${lang==='it'?'Genere':'Gender'}</label>
+        <label>${L('Genere','Gender','Genre')}</label>
         <select id="sc-genere" onchange="onScambiFormChange()">
-          <option value="U">${lang==='it'?'Uomo':'Man'}</option>
-          <option value="D">${lang==='it'?'Donna':'Woman'}</option>
+          <option value="U">${L('Uomo','Man','Homme')}</option>
+          <option value="D">${L('Donna','Woman','Femme')}</option>
         </select>
       </div>
       <div>
-        <label>${lang==='it'?'Gruppo':'Group'}</label>
+        <label>${L('Gruppo','Group','Groupe')}</label>
         <select id="sc-gruppo" onchange="onScambiFormChange()">
           ${SCAMBI_GRUPPI.map(g=>`<option value="${g}">${SCAMBI_GRUPPI_LABEL[g]}</option>`).join('')}
         </select>
       </div>
       <div id="sc-nome-wrap">
-        <label>${lang==='it'?'Nome carta (opz.)':'Card name (opt.)'}</label>
+        <label>${L('Nome carta (opz.)','Card name (opt.)','Nom de la carte (opt.)')}</label>
         <input type="text" id="sc-nome" placeholder="es. Marcell Jacobs">
       </div>
       <div>
-        <label>${lang==='it'?'Note (opz.)':'Notes (opt.)'}</label>
+        <label>${L('Note (opz.)','Notes (opt.)','Notes (opt.)')}</label>
         <input type="text" id="sc-note" placeholder="">
       </div>
     </div>
     <input type="hidden" id="sc-edit-id" value="">
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn-primary-sm" onclick="saveScambio()">${lang==='it'?'Salva inserzione':'Save listing'}</button>
-      <button class="btn" id="sc-cancel-edit" style="display:none" onclick="cancelEditScambio()">${lang==='it'?'Annulla modifica':'Cancel edit'}</button>
+      <button class="btn-primary-sm" onclick="saveScambio()">${L('Salva inserzione','Save listing','Enregistrer l\'annonce')}</button>
+      <button class="btn" id="sc-cancel-edit" style="display:none" onclick="cancelEditScambio()">${L('Annulla modifica','Cancel edit','Annuler la modification')}</button>
     </div>
   </div>`;
 
@@ -2997,10 +3025,10 @@ function buildScambiHTML() {
     <div class="card-title">📋 Bacheca — tutti gli scambi</div>`;
 
   if (!altriOffro.length && !altriCerco.length) {
-    h += `<p style="color:var(--text3);font-size:13px">${lang==='it'?'Nessuna inserzione attiva degli altri membri.':'No active listings from other members.'}</p>`;
+    h += `<p style="color:var(--text3);font-size:13px">${L('Nessuna inserzione attiva degli altri membri.','No active listings from other members.','Aucune annonce active des autres membres.')}</p>`;
   } else {
     if (altriOffro.length) {
-      h += `<div class="section-head" style="color:var(--green)">✅ ${lang==='it'?'Offerte':'Offers'}</div>`;
+      h += `<div class="section-head" style="color:var(--green)">✅ ${L('Offerte','Offers','Offres')}</div>`;
       altriOffro.forEach(r => {
         h += `<div class="scambi-row scambi-tipo-offro">
           <span class="scambi-player">${playerName(r.player_id)}</span>
@@ -3009,7 +3037,7 @@ function buildScambiHTML() {
       });
     }
     if (altriCerco.length) {
-      h += `<div class="section-head" style="color:var(--gold)">🔍 ${lang==='it'?'Ricerche':'Wanted'}</div>`;
+      h += `<div class="section-head" style="color:var(--gold)">🔍 ${L('Ricerche','Wanted','Recherches')}</div>`;
       altriCerco.forEach(r => {
         h += `<div class="scambi-row scambi-tipo-cerco">
           <span class="scambi-player">${playerName(r.player_id)}</span>
@@ -3029,7 +3057,7 @@ function buildScambiHTML() {
   );
 
   if (!gruppiConDati.length) {
-    h += `<p style="color:var(--text3);font-size:13px">${lang==='it'?'Nessuna inserzione presente.':'No listings yet.'}</p>`;
+    h += `<p style="color:var(--text3);font-size:13px">${L('Nessuna inserzione presente.','No listings yet.','Aucune annonce pour l\'instant.')}</p>`;
   } else {
     gruppiConDati.forEach(g => {
       const offroRows = scambiData.filter(r=>r.gruppo===g && r.tipo==='offro');
@@ -3040,26 +3068,26 @@ function buildScambiHTML() {
       </div>
       <div class="scambi-sub">
         <div class="scambi-sub-col">
-          <div class="scambi-sub-col-title offro">✅ ${lang==='it'?'Offro':'Offers'}</div>`;
+          <div class="scambi-sub-col-title offro">✅ ${L('Offro','Offers','Offres')}</div>`;
       if (!offroRows.length) {
-        h += `<span class="scambi-empty">${lang==='it'?'nessuno':'none'}</span>`;
+        h += `<span class="scambi-empty">${L('nessuno','none','aucun')}</span>`;
       } else {
         offroRows.forEach(r => {
           const isMe = r.player_id === currentUser.id;
           const extra = r.nome_carta ? ` — ${r.nome_carta}` : '';
-          const cat = r.categoria==='allenatore' ? (lang==='it'?'All.':'Cch.') : (r.genere==='U'?(lang==='it'?'Uomo':'Man'):(lang==='it'?'Donna':'Woman'));
+          const cat = r.categoria==='allenatore' ? (L('All.','Cch.','Ent.')) : (r.genere==='U'?(L('Uomo','Man','Homme')):(L('Donna','Woman','Femme')));
           h += `<div class="scambi-chip">${isMe?'<strong>Tu</strong>':playerName(r.player_id)} · ${cat}${extra}</div>`;
         });
       }
       h += `</div><div class="scambi-sub-col">
-          <div class="scambi-sub-col-title cerco">🔍 ${lang==='it'?'Cerco':'Wanted'}</div>`;
+          <div class="scambi-sub-col-title cerco">🔍 ${L('Cerco','Wanted','Recherché')}</div>`;
       if (!cercoRows.length) {
-        h += `<span class="scambi-empty">${lang==='it'?'nessuno':'none'}</span>`;
+        h += `<span class="scambi-empty">${L('nessuno','none','aucun')}</span>`;
       } else {
         cercoRows.forEach(r => {
           const isMe = r.player_id === currentUser.id;
           const extra = r.nome_carta ? ` — ${r.nome_carta}` : '';
-          const cat = r.categoria==='allenatore' ? (lang==='it'?'All.':'Cch.') : (r.genere==='U'?(lang==='it'?'Uomo':'Man'):(lang==='it'?'Donna':'Woman'));
+          const cat = r.categoria==='allenatore' ? (L('All.','Cch.','Ent.')) : (r.genere==='U'?(L('Uomo','Man','Homme')):(L('Donna','Woman','Femme')));
           h += `<div class="scambi-chip">${isMe?'<strong>Tu</strong>':playerName(r.player_id)} · ${cat}${extra}</div>`;
         });
       }
@@ -3115,7 +3143,7 @@ function checkMatchLive() {
   const matches = checkMatch(tipo, cat, cat==='atleta'?genere:null, gruppo);
   if (matches.length) {
     const nomi = matches.map(r=>playerName(r.player_id)).join(', ');
-    const controparte = tipo==='offro' ? (lang==='it'?'cerca':'is looking for') : (lang==='it'?'offre':'is offering');
+    const controparte = tipo==='offro' ? (L('cerca','is looking for','cherche')) : (L('offre','is offering','offre'));
     alertEl.style.display = 'block';
     alertEl.textContent = `⚡ Match! ${nomi} ${controparte} questo — contatta${matches.length>1?'li':'lo/la'} nel gioco!`;
   } else {
@@ -3146,17 +3174,17 @@ async function saveScambio() {
     }
     await renderScambiTab();
   } catch(e) {
-    alert((lang==='it'?'Errore nel salvataggio: ':'Save error: ')+e.message);
+    alert((L('Errore nel salvataggio: ','Save error: ','Erreur lors de l\'enregistrement : '))+e.message);
   }
 }
 
 async function deleteScambio(id) {
-  if (!confirm(lang==='it'?'Eliminare questa inserzione?':'Delete this listing?')) return;
+  if (!confirm(L('Eliminare questa inserzione?','Delete this listing?','Supprimer cette annonce ?'))) return;
   try {
     await sb(`italy_scambi?id=eq.${id}`, {method:'DELETE', prefer:'return=minimal'});
     await renderScambiTab();
   } catch(e) {
-    alert((lang==='it'?'Errore: ':'Error: ')+e.message);
+    alert((L('Errore: ','Error: ','Erreur : '))+e.message);
   }
 }
 
@@ -3275,17 +3303,17 @@ function renderProgressioneCard(targetPlayer) {
 
   let h = `<div class="card" style="padding:14px 18px">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-      <div style="font-size:13px;font-weight:700">📈 ${lang==='it'?'Progressione upgrade':'Upgrade tracker'}</div>
+      <div style="font-size:13px;font-weight:700">📈 ${L('Progressione upgrade','Upgrade tracker','Suivi des améliorations')}</div>
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:auto;font-size:12px;color:var(--text2)">
         <input type="checkbox" id="prog-toggle" ${enabled?'checked':''} onchange="toggleProgressione(this.checked,'${targetPlayer}')"
           style="width:16px;height:16px;accent-color:var(--royal);cursor:pointer">
-        ${lang==='it'?'Attiva tracker':'Enable tracker'}
+        ${L('Attiva tracker','Enable tracker','Activer le suivi')}
       </label>
     </div>`;
 
   if (!enabled) {
     h += `<div style="font-size:12px;color:var(--text3);font-style:italic;padding:8px 0">
-      ${lang==='it'?'Attiva il tracker per tenere traccia delle carte accumulate e ricevere consigli sugli upgrade.':'Enable the tracker to monitor your card progress and get upgrade recommendations.'}
+      ${L('Attiva il tracker per tenere traccia delle carte accumulate e ricevere consigli sugli upgrade.','Enable the tracker to monitor your card progress and get upgrade recommendations.','Activez le suivi pour surveiller vos cartes accumulées et recevoir des conseils d\'amélioration.')}
     </div></div>`;
     return h;
   }
@@ -3295,16 +3323,20 @@ function renderProgressioneCard(targetPlayer) {
     const icon = top.pct >= 100 ? '✅' : top.pct >= 70 ? '🟡' : '🔵';
     let advice = '';
     if (top.status === 'ready') {
-      advice = lang==='it'
-        ? `<strong>${top.label}</strong> — hai abbastanza carte! Puoi fare l'upgrade quando hai le monete.`
-        : `<strong>${top.label}</strong> — enough cards! Upgrade when you have the coins.`;
+      advice = L(
+        `<strong>${top.label}</strong> — hai abbastanza carte! Puoi fare l'upgrade quando hai le monete.`,
+        `<strong>${top.label}</strong> — enough cards! Upgrade when you have the coins.`,
+        `<strong>${top.label}</strong> — assez de cartes ! Vous pouvez améliorer dès que vous avez les pièces.`
+      );
     } else {
-      advice = lang==='it'
-        ? `<strong>${top.label}</strong> — mancano solo <strong>${top.missing}</strong> carte (${top.pct}%). Concentra qui i gettoni gialli.`
-        : `<strong>${top.label}</strong> — only <strong>${top.missing}</strong> cards missing (${top.pct}%). Focus yellow tokens here.`;
+      advice = L(
+        `<strong>${top.label}</strong> — mancano solo <strong>${top.missing}</strong> carte (${top.pct}%). Concentra qui i gettoni gialli.`,
+        `<strong>${top.label}</strong> — only <strong>${top.missing}</strong> cards missing (${top.pct}%). Focus yellow tokens here.`,
+        `<strong>${top.label}</strong> — il ne manque que <strong>${top.missing}</strong> cartes (${top.pct}%). Concentrez les jetons jaunes ici.`
+      );
     }
     h += `<div style="padding:10px 14px;border-radius:var(--radius);margin-bottom:14px;font-size:12px;${statusStyle[top.status]}">
-      ${icon} ${lang==='it'?'Prossimo upgrade consigliato':'Next recommended upgrade'}: ${advice}
+      ${icon} ${L('Prossimo upgrade consigliato','Next recommended upgrade','Prochaine amélioration conseillée')}: ${advice}
     </div>`;
   }
 
@@ -3345,7 +3377,7 @@ function renderProgressioneCard(targetPlayer) {
   });
 
   h += `<div style="margin-top:10px;font-size:11px;color:var(--text3)">
-    ${lang==='it'?'💡 Aggiorna il contatore ogni volta che ricevi nuove carte. I dati vengono salvati automaticamente.':'💡 Update the counter whenever you receive new cards. Data saves automatically.'}
+    ${L('💡 Aggiorna il contatore ogni volta che ricevi nuove carte. I dati vengono salvati automaticamente.','💡 Update the counter whenever you receive new cards. Data saves automatically.','💡 Mettez à jour le compteur à chaque nouvelle carte reçue. Les données sont enregistrées automatiquement.')}
   </div></div>`;
 
   // Vista admin: riepilogo tutti i giocatori con tracker attivo
@@ -3353,12 +3385,12 @@ function renderProgressioneCard(targetPlayer) {
     const activePlayers = allPlayers.filter(p => cardsData[p.id]?.enabled && p.id !== targetPlayer);
     if (activePlayers.length) {
       h += `<div class="card" style="padding:14px 18px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px">👥 ${lang==='it'?'Progressione — tutti i giocatori':'Progression — all players'}</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px">👥 ${L('Progressione — tutti i giocatori','Progression — all players','Progression — tous les joueurs')}</div>
         <div style="overflow-x:auto"><table style="font-size:11px">
           <thead><tr>
-            <th>${lang==='it'?'Giocatore':'Player'}</th>
-            <th>Atleti M</th><th>Atleti F</th><th>${lang==='it'?'Allenatori':'Coaches'}</th>
-            <th>${lang==='it'?'Prossimo upgrade':'Next upgrade'}</th>
+            <th>${L('Giocatore','Player','Joueur')}</th>
+            <th>Atleti M</th><th>Atleti F</th><th>${L('Allenatori','Coaches','Entraîneurs')}</th>
+            <th>${L('Prossimo upgrade','Next upgrade','Prochaine amélioration')}</th>
           </tr></thead><tbody>`;
 
       activePlayers.forEach(p => {
