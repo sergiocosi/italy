@@ -318,6 +318,7 @@ select{font-size:16px}
       <button class="tab" data-tabkey="inventario" onclick="showTab('inventario')">🎒 Inventario</button>
       <button class="tab" data-tabkey="trofei" onclick="showTab('trofei')">🏆 Trofei</button>
       <button class="tab" data-tabkey="scambi" onclick="showTab('scambi')">🔄 Scambi</button>
+      <button class="tab" data-tabkey="roster" onclick="showTab('roster')" id="tab-btn-roster" style="display:none">👥 Roster</button>
       <button class="tab" data-tabkey="dctracker" onclick="window.open('https://sergiocosi.github.io/dctracker/','_blank')" style="background:var(--goldlt);color:var(--gold)">📊 DC Tracker ↗</button>
       <button class="tab" data-tabkey="guida" onclick="showTab('guida')">❓ Guida</button>
     </div>
@@ -462,6 +463,61 @@ select{font-size:16px}
       <div id="scambi-content"><div class="loading"><span class="spinner"></span>Caricamento...</div></div>
     </div>
 
+    <!-- TAB ROSTER (admin-only) -->
+    <div id="tab-roster" style="display:none">
+      <div class="card">
+        <div class="card-title">👥 Membri attivi (<span id="roster-count-active">0</span>)</div>
+        <div id="roster-active-list"><div class="loading"><span class="spinner"></span>Caricamento...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">➕ Aggiungi nuovo membro</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">ID login (univoco)</label>
+            <input type="text" id="roster-new-id" placeholder="es. MarioRossi" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Nome visualizzato</label>
+            <input type="text" id="roster-new-name" placeholder="es. Mario Rossi" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Password iniziale</label>
+            <input type="text" id="roster-new-pwd" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Data ingresso</label>
+            <input type="date" id="roster-new-entry" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+        </div>
+        <button class="btn-primary-sm" onclick="addRosterPlayer()">Aggiungi membro</button>
+        <div class="error-msg" id="roster-add-msg" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📜 Ex membri (storico)</div>
+        <div id="roster-inactive-list"><div class="loading"><span class="spinner"></span>Caricamento...</div></div>
+      </div>
+    </div>
+
+    <!-- MODALE DISATTIVA MEMBRO (admin) -->
+    <div class="guide-modal-overlay" id="deactivate-modal-overlay" style="display:none">
+      <div class="guide-modal-box" style="max-width:420px">
+        <div class="guide-modal-head">
+          <h3 id="deactivate-modal-title">Disattiva membro</h3>
+        </div>
+        <div class="guide-modal-body">
+          <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Il giocatore resterà nello storico con tutti i suoi dati passati (settimane, trofei), ma sparirà da tutte le liste operative (staffette, ranking, obbligatorie, messaggio) da subito.</p>
+          <div>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Data di uscita</label>
+            <input type="date" id="deactivate-date" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+        </div>
+        <div class="guide-modal-foot">
+          <button class="btn-primary-sm" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)" onclick="closeDeactivateModal()">Annulla</button>
+          <button class="btn-primary-sm" style="background:var(--red);border-color:var(--red)" onclick="confirmDeactivate()">Disattiva</button>
+        </div>
+      </div>
+    </div>
+
     <!-- TAB GUIDA -->
     <div id="tab-guida" style="display:none">
       <div class="card" id="guida-card-content"></div>
@@ -476,7 +532,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.5 — 19 lug 2026 (griglia staffette per ranking)';
+const APP_VERSION='v1.7 — 27 lug 2026 (gestione roster: entrata/uscita membri)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -631,6 +687,7 @@ async function loginSuccess() {
   if (isAdmin) document.getElementById('admin-calcola-bar').style.display='block';
   else document.getElementById('user-msg-bar').style.display='block';
   if (isAdmin) document.getElementById('admin-week-bar').style.display='block';
+  if (isAdmin) document.getElementById('tab-btn-roster').style.display='';
 
   // Carica sempre la lista giocatori (serve per dropdown admin e per i dati)
   // Lo facciamo qui e non solo in init() perché al refresh il blocco login viene saltato
@@ -656,7 +713,7 @@ async function loginSuccess() {
 // Deep-linking generico: sergiocosi.github.io/italy/#messaggio (o #ranking,
 // #trofei, ecc.) apre direttamente quel tab, ma SOLO dopo il login — prima
 // l'hash viene ignorato e resta il tab di default (Giorno CC).
-const VALID_TABS=['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','scambi','guida'];
+const VALID_TABS=['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','scambi','roster','guida'];
 function applyDeepLinkTab(){
   const h=(location.hash||'').replace('#','').trim().toLowerCase();
   if(VALID_TABS.includes(h)) showTab(h);
@@ -888,6 +945,10 @@ function rPill(p,d){const r=getRank(p,d);return `<span class="rp ${rClass(r)}">$
 // usato per "what-if": Score corretto = Valore CC + K_COACH × Allenatore.
 // Non sostituisce getScore() in nessun calcolo esistente: è una vista parallela
 // solo per confronto admin, finché non si decide se adottarla.
+// SHOW_SCORE_CORRETTO: disattiva SOLO la visualizzazione (badge 🔬⚠, colonne,
+// note a piè pagina) senza toccare le funzioni sottostanti — per ora fa solo
+// confusione. Rimetterlo a true quando si deciderà come evidenziarlo meglio.
+const SHOW_SCORE_CORRETTO = false;
 const K_COACH = 2;
 
 function getScoreCorretto(playerId, disc, k=K_COACH) {
@@ -917,7 +978,8 @@ function getRankCorretto(playerId, disc, k=K_COACH) {
 
 // ── TABS ─────────────────────────────────────────────────────
 function showTab(t){
-  ['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','scambi','guida'].forEach(n=>{
+  if(t==='roster' && !isAdmin) t='giorno'; // sicurezza: tab admin-only anche via deep-link hash
+  ['giorno','messaggio','staffette','ranking','inserisci','inventario','trofei','scambi','roster','guida'].forEach(n=>{
     document.getElementById('tab-'+n).style.display='none';
   });
   document.getElementById('tab-'+t).style.display='block';
@@ -932,7 +994,148 @@ function showTab(t){
   if(t==='inserisci') renderInsertTab();
   if(t==='inventario') renderInventarioTab();
   if(t==='scambi') renderScambiTab();
+  if(t==='roster') renderRoster();
   if(t==='guida') document.getElementById('guida-card-content').innerHTML=renderGuidaContent();
+}
+
+// ── GESTIONE ROSTER (admin-only) ──────────────────────────────
+// Soft-delete: un membro uscito viene marcato active=false con data_uscita,
+// non viene mai cancellato dal DB. Resta così visibile nello storico (Ex
+// membri) e in tutte le settimane/trofei passati, ma sparisce da allPlayers
+// (che filtra active=eq.true) e quindi da staffette/ranking/obbligatorie/
+// messaggio/inventario correnti.
+let rosterAllRows=[];
+let deactivateTargetId=null;
+
+async function renderRoster(){
+  if(!isAdmin) return;
+  const entryEl=document.getElementById('roster-new-entry');
+  if(entryEl && !entryEl.value) entryEl.value=new Date().toISOString().slice(0,10);
+  try{
+    rosterAllRows = await sbGet('italy_players','select=id,name,active,data_ingresso,data_uscita&order=name');
+  }catch(e){
+    document.getElementById('roster-active-list').innerHTML='<div class="alert a-warn">Errore di caricamento: '+e.message+'</div>';
+    document.getElementById('roster-inactive-list').innerHTML='';
+    return;
+  }
+  renderRosterActive();
+  renderRosterInactive();
+}
+
+function renderRosterActive(){
+  const active = rosterAllRows.filter(p=>p.active!==false);
+  document.getElementById('roster-count-active').textContent = active.length;
+  if(!active.length){
+    document.getElementById('roster-active-list').innerHTML='<p style="font-size:12px;color:var(--text3)">Nessun membro attivo.</p>';
+    return;
+  }
+  let h=`<table><thead><tr><th>Nome</th><th>ID</th><th>Data ingresso</th><th></th></tr></thead><tbody>`;
+  active.forEach(p=>{
+    h+=`<tr>
+      <td style="font-weight:600">${p.name}</td>
+      <td style="font-family:var(--mono);color:var(--text3)">${p.id}</td>
+      <td>${p.data_ingresso||'—'}</td>
+      <td><button class="btn-reset-relay" onclick="openDeactivateModal('${p.id}')">Disattiva</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table>`;
+  document.getElementById('roster-active-list').innerHTML=h;
+}
+
+function renderRosterInactive(){
+  const inactive = rosterAllRows.filter(p=>p.active===false)
+    .sort((a,b)=>(b.data_uscita||'').localeCompare(a.data_uscita||''));
+  if(!inactive.length){
+    document.getElementById('roster-inactive-list').innerHTML='<p style="font-size:12px;color:var(--text3)">Nessun ex membro.</p>';
+    return;
+  }
+  let h=`<table><thead><tr><th>Nome</th><th>ID</th><th>Ingresso</th><th>Uscita</th><th></th></tr></thead><tbody>`;
+  inactive.forEach(p=>{
+    h+=`<tr>
+      <td style="color:var(--text2)">${p.name}</td>
+      <td style="font-family:var(--mono);color:var(--text3)">${p.id}</td>
+      <td>${p.data_ingresso||'—'}</td>
+      <td>${p.data_uscita||'—'}</td>
+      <td><button class="btn-primary-sm" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:6px 12px;font-size:11px" onclick="reactivateRosterPlayer('${p.id}')">Riattiva</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table>`;
+  document.getElementById('roster-inactive-list').innerHTML=h;
+}
+
+function openDeactivateModal(id){
+  deactivateTargetId=id;
+  const p=rosterAllRows.find(x=>x.id===id);
+  document.getElementById('deactivate-modal-title').textContent=`Disattiva ${p?p.name:id}`;
+  document.getElementById('deactivate-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('deactivate-modal-overlay').style.display='flex';
+}
+function closeDeactivateModal(){
+  document.getElementById('deactivate-modal-overlay').style.display='none';
+  deactivateTargetId=null;
+}
+async function confirmDeactivate(){
+  if(!deactivateTargetId) return;
+  const dateVal=document.getElementById('deactivate-date').value;
+  if(!dateVal){ alert('Inserisci una data di uscita.'); return; }
+  try{
+    await sb(`italy_players?id=eq.${deactivateTargetId}`,{
+      method:'PATCH',
+      body:JSON.stringify({active:false,data_uscita:dateVal})
+    });
+    closeDeactivateModal();
+    allPlayers=[]; // forza il ricaricamento della lista attivi al prossimo giro
+    await renderRoster();
+  }catch(e){
+    alert('Errore nel salvataggio: '+e.message);
+  }
+}
+
+async function reactivateRosterPlayer(id){
+  if(!confirm('Riattivare questo membro? Tornerà visibile in tutte le liste operative.')) return;
+  try{
+    await sb(`italy_players?id=eq.${id}`,{
+      method:'PATCH',
+      body:JSON.stringify({active:true,data_uscita:null})
+    });
+    allPlayers=[];
+    await renderRoster();
+  }catch(e){
+    alert('Errore: '+e.message);
+  }
+}
+
+async function addRosterPlayer(){
+  const id=document.getElementById('roster-new-id').value.trim();
+  const name=document.getElementById('roster-new-name').value.trim();
+  const pwd=document.getElementById('roster-new-pwd').value;
+  const entry=document.getElementById('roster-new-entry').value;
+  const msgEl=document.getElementById('roster-add-msg');
+  msgEl.style.display='none';
+  if(!id||!name||!pwd){
+    msgEl.style.display='block'; msgEl.textContent='Compila ID, nome e password.'; return;
+  }
+  try{
+    const existing = await sbGet('italy_players',`select=id&id=eq.${encodeURIComponent(id)}`);
+    if(existing && existing.length){
+      msgEl.style.display='block'; msgEl.textContent='Esiste già un giocatore con questo ID.'; return;
+    }
+    await sb('italy_players',{
+      method:'POST',
+      body:JSON.stringify({id,name,password:pwd,is_admin:false,active:true,data_ingresso:entry||new Date().toISOString().slice(0,10)})
+    });
+    document.getElementById('roster-new-id').value='';
+    document.getElementById('roster-new-name').value='';
+    document.getElementById('roster-new-pwd').value='';
+    allPlayers=[];
+    await renderRoster();
+    msgEl.style.display='block'; msgEl.style.color='var(--green)'; msgEl.style.background='var(--greenlt)';
+    msgEl.textContent='✓ Membro aggiunto!';
+    setTimeout(()=>{msgEl.style.display='none';msgEl.style.color='';msgEl.style.background='';},4000);
+  }catch(e){
+    msgEl.style.display='block'; msgEl.style.color=''; msgEl.style.background='';
+    msgEl.textContent='Errore nel salvataggio: '+e.message;
+  }
 }
 
 function setDay(d,btn){
@@ -1074,7 +1277,7 @@ function renderOblSummary(){
       // Admin: chi sarebbe il migliore TRA i giocatori assegnati (ps) secondo il rank attuale
       // e secondo lo score corretto k=2? Se sono persone diverse, segnalo l'inversione.
       let bestAttualeId=null, bestCorrettoId=null;
-      if(isAdmin && ps.length>=2){
+      if(SHOW_SCORE_CORRETTO && isAdmin && ps.length>=2){
         let bestRank=Infinity, bestSc=-1;
         ps.forEach(p=>{
           const r=getRank(p.id,d);
@@ -1089,7 +1292,7 @@ function renderOblSummary(){
         const topBadge=p.isTop?` <span style="font-size:9px;color:var(--gold);font-weight:700">★</span>`:'';
         const isBestAttuale = isAdmin && bestAttualeId===p.id;
         const isBestCorretto = isAdmin && bestCorrettoId===p.id;
-        const diverge = isAdmin && bestAttualeId && bestCorrettoId && isBestAttuale && !isBestCorretto;
+        const diverge = SHOW_SCORE_CORRETTO && isAdmin && bestAttualeId && bestCorrettoId && isBestAttuale && !isBestCorretto;
         const corrFlag = diverge ? ` <span style="font-size:10px;color:var(--gold)" title="Con score corretto (k=${K_COACH}) il migliore tra questi sarebbe ${bestCorrettoId}">🔬⚠</span>` : '';
         return `<span class="obl-chip">
           <span>${p.id}</span>${topBadge}${corrFlag}
@@ -1108,7 +1311,7 @@ function renderOblSummary(){
     h+=`</div>`;
   });
 
-  if(isAdmin){
+  if(SHOW_SCORE_CORRETTO && isAdmin){
     h+=`<p style="font-size:11px;color:var(--text3);margin-top:8px">🔬⚠ = con lo score corretto (k=${K_COACH}, sperimentale) il migliore per quella disciplina sarebbe un altro giocatore tra quelli assegnati.</p>`;
   }
   document.getElementById('obl-summary').innerHTML=h;
@@ -1327,7 +1530,7 @@ function calcola(){
   const precisiIds=new Set(players.filter(p=>(obl[p.id]||[]).length>0 && (libere[p.id]||[]).length>0).map(p=>p.id));
 
   // Admin: stessa identica ottimizzazione ma con score corretto (k=2), solo per confronto visuale
-  const libereCorrette = isAdmin ? calcolaLibereCorrette(obl,players,TOP_NAMES) : null;
+  const libereCorrette = (SHOW_SCORE_CORRETTO && isAdmin) ? calcolaLibereCorrette(obl,players,TOP_NAMES) : null;
 
   renderMessaggio(obl,libere,discCount,buildAltriGuidance(obl,libere,precisiIds,players),libereCorrette,precisiIds,coverageSet);
 }
@@ -1643,7 +1846,7 @@ function renderStaffette(){
 
     // Admin: composizione "what-if" con score corretto (k=2), solo per confronto, mai usata per le griglie reali
     let squadOfCorretto=null;
-    if(isAdmin){
+    if(SHOW_SCORE_CORRETTO && isAdmin){
       const squadsCorretto=buildSquadsCorretto(disc,staffMode);
       squadOfCorretto=squadOf(squadsCorretto);
     }
@@ -1711,7 +1914,7 @@ function renderStaffette(){
     });
     h+=`</div></div>`;
   }
-  if(isAdmin){
+  if(SHOW_SCORE_CORRETTO && isAdmin){
     h+=`<p style="font-size:11px;color:var(--text3);margin-top:4px">🔬⚠ = con lo score corretto (k=${K_COACH}, sperimentale, basato sull'analisi DC Tracker) questo atleta passerebbe da una griglia che fa punti a una libera, o viceversa.</p>`;
   }
   document.getElementById('staffette-content').innerHTML=h;
@@ -1796,11 +1999,11 @@ function renderRankingTable(){
   const players=allPlayers.filter(p=>p.active!==false);
   const sorted=players.map(p=>({p,s:getScore(p.id,disc)})).filter(x=>x.s!=null&&x.s>0).sort((a,b)=>b.s-a.s);
 
-  const corrCol = isAdmin ? `<th title="Sperimentale: Valore CC + ${K_COACH}× Allenatore">Score k=${K_COACH} 🔬</th><th title="Rank secondo lo score corretto">Rank k=${K_COACH}</th>` : '';
+  const corrCol = (SHOW_SCORE_CORRETTO && isAdmin) ? `<th title="Sperimentale: Valore CC + ${K_COACH}× Allenatore">Score k=${K_COACH} 🔬</th><th title="Rank secondo lo score corretto">Rank k=${K_COACH}</th>` : '';
   let h=`<table><thead><tr><th>#</th><th>${t('player')}</th><th>${t('score_cc')}</th><th>Rank</th>${corrCol}</tr></thead><tbody>`;
   sorted.forEach(({p,s},i)=>{
     let corrCells='';
-    if(isAdmin){
+    if(SHOW_SCORE_CORRETTO && isAdmin){
       const sc = getScoreCorretto(p.id, disc);
       const rc = getRankCorretto(p.id, disc);
       const rankAttuale = i+1;
@@ -1816,7 +2019,7 @@ function renderRankingTable(){
     </tr>`;
   });
   h+=`</tbody></table>`;
-  if(isAdmin){
+  if(SHOW_SCORE_CORRETTO && isAdmin){
     h+=`<p style="font-size:11px;color:var(--text3);margin-top:8px">🔬 Score k=${K_COACH}: vista sperimentale, visibile solo agli admin. Valore CC + ${K_COACH}× Allenatore, basato sull'analisi DC Tracker. ⚠ = la posizione cambierebbe rispetto al ranking attuale.</p>`;
   }
   document.getElementById('ranking-table').innerHTML=h;
