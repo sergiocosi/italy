@@ -532,7 +532,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.7 — 27 lug 2026 (gestione roster: entrata/uscita membri)';
+const APP_VERSION='v1.8 — 3 ago 2026 (flag guest per player + fix conferma salvataggio trofei/PB)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -642,7 +642,7 @@ async function init() {
 
   // Load players for login dropdown
   try {
-    const players = await sbGet('italy_players', 'select=id,name&active=eq.true&order=name');
+    const players = await sbGet('italy_players', 'select=id,name,guest&active=eq.true&order=name');
     allPlayers = players;
     const sel = document.getElementById('login-player');
     players.forEach(p => {
@@ -693,7 +693,7 @@ async function loginSuccess() {
   // Lo facciamo qui e non solo in init() perché al refresh il blocco login viene saltato
   if (!allPlayers.length) {
     try {
-      allPlayers = await sbGet('italy_players', 'select=id,name&active=eq.true&order=name');
+      allPlayers = await sbGet('italy_players', 'select=id,name,guest&active=eq.true&order=name');
     } catch(e) { console.error('Players load error:', e); }
   }
 
@@ -1239,7 +1239,7 @@ function renderGuidaContent(){
 
 function renderOblSummary(){
   const obl=oblData[currentDay]||{};
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
 
   // Build per-discipline map: disc -> [{player, isTop}]
   const discMap={};
@@ -1323,7 +1323,7 @@ function renderOblCheck(){
   if(!isAdmin){ if(bar) bar.style.display='none'; return; }
   if(bar) bar.style.display='block';
 
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
   const dayNames={1:t('day1'),2:t('day2'),3:t('day3'),4:t('day4')};
 
   const complete=[], missing=[];
@@ -1479,7 +1479,7 @@ function calcolaLibereCorrette(obl,players,topNames){
 
 function calcola(){
   const obl=oblData[currentDay]||{};
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
   msgCalcolato[currentDay]=true;
 
   // TOP dinamici: i 10 con score medio più alto questa settimana
@@ -1668,7 +1668,7 @@ function renderMessaggio(obl,libere,discCount,altriGuide,libereCorrette,precisiI
   keys.forEach((k,i)=>{staffText+=`${ords[i]} Relay 4x400: ${(s400[k]||[]).join(' ').toUpperCase()}\n`;});
   staffText+=`\n${bi('fifth_sixth')}`;
 
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
   const precisiPlayers=players.filter(p=>precisiIds.has(p.id));
   const{pref1,pref2,avoid}=altriGuide;
   const topLines=precisiPlayers.map(p=>{
@@ -1773,7 +1773,7 @@ function loadOverrideFromStorage(){
 }
 
 function buildSquads(disc,mode){
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
   const ranked=players.map(p=>({p:p.id,r:getScore(p.id,disc)||0})).filter(x=>x.r>0).sort((a,b)=>b.r-a.r);
   const squads={A:[],B:[],C:[],D:ranked.slice(12,16).map(x=>x.p)};
   const pool=ranked.slice(0,12);
@@ -1803,7 +1803,7 @@ function buildSquads(disc,mode){
 // getScoreCorretto (Valore CC + K_COACH × Allenatore) invece di getScore.
 // Serve solo per confronto "what-if", non viene mai usata per le griglie reali.
 function buildSquadsCorretto(disc,mode,k=K_COACH){
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
   const ranked=players.map(p=>({p:p.id,r:getScoreCorretto(p.id,disc,k)||0})).filter(x=>x.r>0).sort((a,b)=>b.r-a.r);
   const squads={A:[],B:[],C:[],D:ranked.slice(12,16).map(x=>x.p)};
   const pool=ranked.slice(0,12);
@@ -1996,7 +1996,7 @@ function populateDiscSelect(){
 function renderRankingTable(){
   const disc=document.getElementById('disc-select').value;
   if(!disc){document.getElementById('ranking-table').innerHTML='';return;}
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
   const sorted=players.map(p=>({p,s:getScore(p.id,disc)})).filter(x=>x.s!=null&&x.s>0).sort((a,b)=>b.s-a.s);
 
   const corrCol = (SHOW_SCORE_CORRETTO && isAdmin) ? `<th title="Sperimentale: Valore CC + ${K_COACH}× Allenatore">Score k=${K_COACH} 🔬</th><th title="Rank secondo lo score corretto">Rank k=${K_COACH}</th>` : '';
@@ -2536,9 +2536,9 @@ async function savePBs(){
       prefer:'resolution=merge-duplicates,return=representation'
     });
     pbDrafts[targetPlayer]={...existing,...data};
-    msg.style.display='inline';
-    setTimeout(()=>msg.style.display='none',3000);
     renderTrofei();
+    const msg2=document.getElementById('pb-save-msg');
+    if(msg2){ msg2.style.display='inline'; setTimeout(()=>msg2.style.display='none',3000); }
   }catch(e){ alert(t('error_save')+': '+e.message); }
 }
 
@@ -2583,7 +2583,7 @@ async function publishSnapshot(){
   msg.textContent=L('Pubblicazione in corso...','Publishing...','Publication en cours...');
 
   let saved=0, errors=0;
-  const players=allPlayers.filter(p=>p.active!==false);
+  const players=allPlayers.filter(p=>p.active!==false&&!p.guest);
 
   for(const p of players){
     const draft=pbDrafts[p.id];
@@ -2605,15 +2605,19 @@ async function publishSnapshot(){
     }catch(e){ console.error('Snapshot error for '+p.id, e); errors++; }
   }
 
-  if(errors===0){
-    msg.style.color='var(--green)';
-    msg.textContent=`✓ ${L('Snapshot pubblicato per','Snapshot published for','Instantané publié pour')} ${saved} ${L('giocatori','players','joueurs')}`;
-  } else {
-    msg.style.color='var(--red)';
-    msg.textContent=`${saved} OK, ${errors} ${L('errori','errors','erreurs')}`;
-  }
-  setTimeout(()=>{msg.style.display='none';},5000);
   renderTrofei();
+  const msg2=document.getElementById('snapshot-msg');
+  if(msg2){
+    msg2.style.display='inline';
+    if(errors===0){
+      msg2.style.color='var(--green)';
+      msg2.textContent=`✓ ${L('Snapshot pubblicato per','Snapshot published for','Instantané publié pour')} ${saved} ${L('giocatori','players','joueurs')}`;
+    } else {
+      msg2.style.color='var(--red)';
+      msg2.textContent=`${saved} OK, ${errors} ${L('errori','errors','erreurs')}`;
+    }
+    setTimeout(()=>{msg2.style.display='none';},5000);
+  }
 }
 
 // ── LOGO ─────────────────────────────────────────────────────
