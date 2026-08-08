@@ -234,7 +234,13 @@ select{font-size:16px}
 .scambi-sub-col-title.offro{color:var(--green)}
 .scambi-sub-col-title.cerco{color:var(--gold)}
 .scambi-chip{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border-radius:20px;padding:2px 8px;font-size:11px;margin:2px;border:1px solid var(--border)}
+.scambi-chip-me{background:var(--royallt);border-color:var(--royal);color:var(--royal)}
 .scambi-empty{font-size:11px;color:var(--text3);font-style:italic}
+.scambi-match-card{background:var(--greenlt);border:1.5px solid var(--green);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px}
+.scambi-match-card:last-child{margin-bottom:0}
+.scambi-match-text{font-size:13px;color:var(--text);margin-bottom:6px}
+.scambi-wa-btn{display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;border:none;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none}
+.scambi-wa-btn:hover{opacity:.9}
 @media(max-width:600px){.scambi-sub{grid-template-columns:1fr}}
 
 /* MODALE GUIDA PRIMO ACCESSO */
@@ -532,7 +538,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.8 — 3 ago 2026 (flag guest per player + fix conferma salvataggio trofei/PB)';
+const APP_VERSION='v1.9 — 8 ago 2026 (Scambi: match persistenti + contatto WhatsApp opzionale, evidenza "Tu" nel riepilogo)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -642,7 +648,7 @@ async function init() {
 
   // Load players for login dropdown
   try {
-    const players = await sbGet('italy_players', 'select=id,name,guest&active=eq.true&order=name');
+    const players = await sbGet('italy_players', 'select=id,name,guest,whatsapp&active=eq.true&order=name');
     allPlayers = players;
     const sel = document.getElementById('login-player');
     players.forEach(p => {
@@ -665,7 +671,7 @@ async function doLogin() {
   if (!playerId || !pwd) { errEl.style.display='block'; errEl.textContent='Seleziona il tuo nome e inserisci la password.'; return; }
 
   try {
-    const res = await sbGet('italy_players', `select=id,name,is_admin,active,guida_vista&id=eq.${playerId}&password=eq.${encodeURIComponent(pwd)}&active=eq.true`);
+    const res = await sbGet('italy_players', `select=id,name,is_admin,active,guida_vista,whatsapp&id=eq.${playerId}&password=eq.${encodeURIComponent(pwd)}&active=eq.true`);
     if (!res || res.length===0) {
       errEl.style.display='block'; errEl.textContent='Password errata o giocatore non trovato.'; return;
     }
@@ -693,7 +699,7 @@ async function loginSuccess() {
   // Lo facciamo qui e non solo in init() perché al refresh il blocco login viene saltato
   if (!allPlayers.length) {
     try {
-      allPlayers = await sbGet('italy_players', 'select=id,name,guest&active=eq.true&order=name');
+      allPlayers = await sbGet('italy_players', 'select=id,name,guest,whatsapp&active=eq.true&order=name');
     } catch(e) { console.error('Players load error:', e); }
   }
 
@@ -1183,9 +1189,9 @@ function renderGuidaContent(){
     },
     {
       n:5, badge:'🔵', titleIt:'Facoltativo — Scambi tra giocatori', titleEn:'Optional — Trading between players', titleFr:'Facultatif — Échanges entre joueurs',
-      bodyIt:'Nel tab <strong>Scambi</strong> puoi pubblicare le carte che ti servono o che hai in più, e vedere le inserzioni degli altri membri del club. Utile per accelerare gli upgrade, ma non obbligatorio.',
-      bodyEn:'In the <strong>Trades</strong> tab you can post cards you need or have spare, and see other club members\' listings. Useful for speeding up upgrades, but not required.',
-      bodyFr:'Dans l\'onglet <strong>Échanges</strong>, vous pouvez publier les cartes dont vous avez besoin ou celles en trop, et voir les annonces des autres membres du club. Utile pour accélérer les améliorations, mais pas obligatoire.'
+      bodyIt:'Nel tab <strong>Scambi</strong> puoi pubblicare le carte che ti servono o che hai in più, e vedere le inserzioni degli altri membri del club. Se trovi un match, puoi vederlo subito nella sezione "Match trovati per te" — e se hai inserito il tuo numero WhatsApp nel tab Dati CC, l\'altro giocatore può contattarti con un tap. Utile per accelerare gli upgrade, ma non obbligatorio.',
+      bodyEn:'In the <strong>Trades</strong> tab you can post cards you need or have spare, and see other club members\' listings. If a match exists, you\'ll see it right away in the "Matches found for you" section — and if you\'ve added your WhatsApp number in the CC Data tab, the other player can contact you with one tap. Useful for speeding up upgrades, but not required.',
+      bodyFr:'Dans l\'onglet <strong>Échanges</strong>, vous pouvez publier les cartes dont vous avez besoin ou celles en trop, et voir les annonces des autres membres du club. En cas de match, vous le verrez tout de suite dans la section "Matches trouvés pour toi" — et si vous avez ajouté votre numéro WhatsApp dans l\'onglet Données CC, l\'autre joueur peut vous contacter en un clic. Utile pour accélérer les améliorations, mais pas obligatoire.'
     }
   ];
 
@@ -2146,6 +2152,21 @@ function renderInsertTab(){
     </div>
   </div>`;
 
+  // ── NUMERO WHATSAPP (opzionale, per contatto scambi) ─────────
+  h+=`<div class="card">
+    <div class="card-title">${L('📱 Numero WhatsApp (opzionale)','📱 WhatsApp number (optional)','📱 Numéro WhatsApp (facultatif)')}</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px">${L('Se lo inserisci, agli altri membri compare un pulsante per contattarti direttamente quando trovano un match nel tab Scambi. Resta visibile solo a chi ha un match con te, non in bacheca pubblica.','If you enter it, other members get a button to contact you directly when they find a match in the Trades tab. It stays visible only to those who have a match with you, not in the public board.','Si vous le renseignez, les autres membres verront un bouton pour vous contacter directement en cas de match dans l\'onglet Échanges. Il reste visible uniquement pour ceux qui ont un match avec vous, pas sur le tableau public.')}</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div class="input-group" style="min-width:200px">
+        <label>${L('Numero (con prefisso, es. +39...)','Number (with prefix, e.g. +39...)','Numéro (avec indicatif, ex. +39...)')}</label>
+        <input type="tel" id="wa-number" placeholder="+39 333 1234567" value="${currentUser.whatsapp||''}" style="font-size:14px;padding:8px 10px;border:1.5px solid var(--border2);border-radius:var(--radius);width:100%">
+      </div>
+      <button class="btn-primary-sm" onclick="saveWhatsapp()" style="margin-bottom:0;white-space:nowrap">${L('Salva numero','Save number','Enregistrer le numéro')}</button>
+      <button class="btn" onclick="clearWhatsapp()" style="margin-bottom:0;white-space:nowrap">${L('Rimuovi','Remove','Supprimer')}</button>
+      <span id="wa-msg" style="font-size:12px;display:none"></span>
+    </div>
+  </div>`;
+
     document.getElementById('insert-content').innerHTML=h;
 }
 
@@ -2670,6 +2691,33 @@ async function changePassword(){
   }
 }
 
+// ── NUMERO WHATSAPP ────────────────────────────────────────────
+async function saveWhatsapp(){
+  const el = document.getElementById('wa-number');
+  const msg = document.getElementById('wa-msg');
+  const val = el.value.trim() || null;
+  try{
+    await sb(`italy_players?id=eq.${currentUser.id}`,{
+      method:'PATCH',
+      body:JSON.stringify({whatsapp:val})
+    });
+    currentUser.whatsapp = val;
+    localStorage.setItem('italy_logged_user', JSON.stringify(currentUser));
+    const me = allPlayers.find(p=>p.id===currentUser.id);
+    if(me) me.whatsapp = val;
+    msg.style.display='inline'; msg.style.color='var(--green)';
+    msg.textContent=t('saved');
+    setTimeout(()=>msg.style.display='none',4000);
+  }catch(e){
+    msg.style.display='inline'; msg.style.color='var(--red)';
+    msg.textContent='Errore: '+e.message;
+  }
+}
+
+async function clearWhatsapp(){
+  document.getElementById('wa-number').value='';
+  await saveWhatsapp();
+}
 
 // ── INVENTORY DATA ───────────────────────────────────────────
 let inventoryData = {}; // player_id -> row
@@ -3143,6 +3191,29 @@ function checkMatch(tipo, categoria, genere, gruppo) {
   );
 }
 
+function waLink(numberRaw, text) {
+  if (!numberRaw) return null;
+  const digits = String(numberRaw).replace(/[^\d]/g,'');
+  if (!digits) return null;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
+
+function waPlayer(pid) {
+  const p = allPlayers.find(x=>x.id===pid);
+  return p ? p.whatsapp : null;
+}
+
+// Costruisce tutti i match attivi per l'utente corrente, deduplicati per riga propria+controparte
+function buildMieiMatch() {
+  const mie = scambiData.filter(r=>r.player_id===currentUser.id);
+  const out = [];
+  mie.forEach(mia => {
+    const controparti = checkMatch(mia.tipo, mia.categoria, mia.genere, mia.gruppo);
+    controparti.forEach(c => out.push({mia, c}));
+  });
+  return out;
+}
+
 async function renderScambiTab() {
   const el = document.getElementById('scambi-content');
   el.innerHTML = '<div class="loading"><span class="spinner"></span>Caricamento...</div>';
@@ -3233,6 +3304,33 @@ function buildScambiHTML() {
     </div>
   </div>`;
 
+  // ── SEZIONE MATCH: match trovati per l'utente corrente ────────
+  const mieiMatch = buildMieiMatch();
+  h += `<div class="card">
+    <div class="card-title">⚡ ${L('Match trovati per te','Matches found for you','Matches trouvés pour toi')}</div>`;
+  if (!mieiMatch.length) {
+    h += `<p style="color:var(--text3);font-size:13px">${L('Nessun match al momento. Torna a controllare più tardi, o quando qualcuno pubblica una nuova inserzione.','No matches right now. Check back later, or when someone posts a new listing.','Aucun match pour l\'instant. Revenez plus tard, ou quand quelqu\'un publie une nouvelle annonce.')}</p>`;
+  } else {
+    mieiMatch.forEach(({mia, c}) => {
+      const mioVerbo = mia.tipo==='offro' ? L('Offri','You offer','Tu offres') : L('Cerchi','You need','Tu cherches');
+      const suoVerbo = mia.tipo==='offro' ? L('cerca','is looking for','cherche') : L('offre','is offering','offre');
+      const nomeAltro = playerName(c.player_id);
+      const testoMatch = `${mioVerbo} ${scambiLabel(mia)} — <strong>${nomeAltro}</strong> ${suoVerbo} ${L('la stessa cosa','the same thing','la même chose')}.`;
+      const numero = waPlayer(c.player_id);
+      const waText = L(
+        `Ciao ${nomeAltro}! Ho visto su Italy Team che ${suoVerbo} ${scambiLabel(mia)}, ${mioVerbo.toLowerCase()} anche io — ti va di fare uno scambio?`,
+        `Hi ${nomeAltro}! I saw on Italy Team that you ${suoVerbo} ${scambiLabel(mia)}, I have the same — want to trade?`,
+        `Salut ${nomeAltro} ! J'ai vu sur Italy Team que tu ${suoVerbo} ${scambiLabel(mia)}, moi aussi — ça te dit un échange ?`
+      );
+      const link = waLink(numero, waText);
+      h += `<div class="scambi-match-card">
+        <div class="scambi-match-text">${testoMatch}</div>
+        ${link ? `<a class="scambi-wa-btn" href="${link}" target="_blank" rel="noopener">💬 ${L('Contatta su WhatsApp','Contact on WhatsApp','Contacter sur WhatsApp')}</a>` : `<span class="scambi-empty">${L('Nessun numero WhatsApp condiviso da questo giocatore.','No WhatsApp number shared by this player.','Aucun numéro WhatsApp partagé par ce joueur.')}</span>`}
+      </div>`;
+    });
+  }
+  h += '</div>';
+
   // ── SEZIONE 2: BACHECA ────────────────────────────────────────
   const altriOffro = scambiData.filter(r=>r.tipo==='offro' && r.player_id!==currentUser.id);
   const altriCerco = scambiData.filter(r=>r.tipo==='cerco' && r.player_id!==currentUser.id);
@@ -3292,7 +3390,7 @@ function buildScambiHTML() {
           const isMe = r.player_id === currentUser.id;
           const extra = r.nome_carta ? ` — ${r.nome_carta}` : '';
           const cat = r.categoria==='allenatore' ? (L('All.','Cch.','Ent.')) : (r.genere==='U'?(L('Uomo','Man','Homme')):(L('Donna','Woman','Femme')));
-          h += `<div class="scambi-chip">${isMe?'<strong>Tu</strong>':playerName(r.player_id)} · ${cat}${extra}</div>`;
+          h += `<div class="scambi-chip${isMe?' scambi-chip-me':''}">${isMe?('⭐ '+L('Tu','You','Toi')):playerName(r.player_id)} · ${cat}${extra}</div>`;
         });
       }
       h += `</div><div class="scambi-sub-col">
@@ -3304,7 +3402,7 @@ function buildScambiHTML() {
           const isMe = r.player_id === currentUser.id;
           const extra = r.nome_carta ? ` — ${r.nome_carta}` : '';
           const cat = r.categoria==='allenatore' ? (L('All.','Cch.','Ent.')) : (r.genere==='U'?(L('Uomo','Man','Homme')):(L('Donna','Woman','Femme')));
-          h += `<div class="scambi-chip">${isMe?'<strong>Tu</strong>':playerName(r.player_id)} · ${cat}${extra}</div>`;
+          h += `<div class="scambi-chip${isMe?' scambi-chip-me':''}">${isMe?('⭐ '+L('Tu','You','Toi')):playerName(r.player_id)} · ${cat}${extra}</div>`;
         });
       }
       h += `</div></div><div style="margin-bottom:14px"></div>`;
