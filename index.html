@@ -241,6 +241,8 @@ select{font-size:16px}
 .scambi-match-text{font-size:13px;color:var(--text);margin-bottom:6px}
 .scambi-wa-btn{display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;border:none;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none}
 .scambi-wa-btn:hover{opacity:.9}
+.scambi-copy-btn{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.scambi-copy-btn:hover{background:var(--border)}
 @media(max-width:600px){.scambi-sub{grid-template-columns:1fr}}
 
 /* MODALE GUIDA PRIMO ACCESSO */
@@ -3203,6 +3205,16 @@ function waPlayer(pid) {
   return p ? p.whatsapp : null;
 }
 
+function copyWaNumber(number, btnEl) {
+  const restore = btnEl.textContent;
+  const done = () => { btnEl.textContent = L('✓ Copiato!','✓ Copied!','✓ Copié !'); setTimeout(()=>btnEl.textContent=restore, 2000); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(number).then(done).catch(()=>prompt(L('Copia il numero:','Copy the number:','Copiez le numéro :'), number));
+  } else {
+    prompt(L('Copia il numero:','Copy the number:','Copiez le numéro :'), number);
+  }
+}
+
 // Costruisce tutti i match attivi per l'utente corrente, deduplicati per riga propria+controparte
 function buildMieiMatch() {
   const mie = scambiData.filter(r=>r.player_id===currentUser.id);
@@ -3312,20 +3324,30 @@ function buildScambiHTML() {
     h += `<p style="color:var(--text3);font-size:13px">${L('Nessun match al momento. Torna a controllare più tardi, o quando qualcuno pubblica una nuova inserzione.','No matches right now. Check back later, or when someone posts a new listing.','Aucun match pour l\'instant. Revenez plus tard, ou quand quelqu\'un publie une nouvelle annonce.')}</p>`;
   } else {
     mieiMatch.forEach(({mia, c}) => {
-      const mioVerbo = mia.tipo==='offro' ? L('Offri','You offer','Tu offres') : L('Cerchi','You need','Tu cherches');
-      const suoVerbo = mia.tipo==='offro' ? L('cerca','is looking for','cherche') : L('offre','is offering','offre');
+      const mioVerboDisplay = mia.tipo==='offro' ? L('Offri','You offer','Tu offres') : L('Cerchi','You need','Tu cherches');
+      const suoVerboDisplay = c.tipo==='offro' ? L('offre','offers','offre') : L('cerca','is looking for','cherche');
       const nomeAltro = playerName(c.player_id);
-      const testoMatch = `${mioVerbo} ${scambiLabel(mia)} — <strong>${nomeAltro}</strong> ${suoVerbo} ${L('la stessa cosa','the same thing','la même chose')}.`;
+      const testoMatch = `${mioVerboDisplay} ${scambiLabel(mia)} — <strong>${nomeAltro}</strong> ${suoVerboDisplay} ${scambiLabel(c)}.`;
       const numero = waPlayer(c.player_id);
+      // Verbi in seconda persona informale (tu) per la controparte, prima persona per me
+      const tuVerboIt = c.tipo==='offro' ? 'hai' : 'cerchi';
+      const ioFraseIt = mia.tipo==='offro' ? 'ce l\'ho io' : 'lo cerco anche io';
+      const tuVerboEn = c.tipo==='offro' ? 'have' : 'need';
+      const ioFraseEn = mia.tipo==='offro' ? 'I have it' : 'I need it too';
+      const tuVerboFr = c.tipo==='offro' ? 'as' : 'cherches';
+      const ioFraseFr = mia.tipo==='offro' ? 'je l\'ai' : 'je le cherche aussi';
       const waText = L(
-        `Ciao ${nomeAltro}! Ho visto su Italy Team che ${suoVerbo} ${scambiLabel(mia)}, ${mioVerbo.toLowerCase()} anche io — ti va di fare uno scambio?`,
-        `Hi ${nomeAltro}! I saw on Italy Team that you ${suoVerbo} ${scambiLabel(mia)}, I have the same — want to trade?`,
-        `Salut ${nomeAltro} ! J'ai vu sur Italy Team que tu ${suoVerbo} ${scambiLabel(mia)}, moi aussi — ça te dit un échange ?`
+        `Ciao ${nomeAltro}! Ho visto su Italy Team che ${tuVerboIt} ${scambiLabel(c)} — ${ioFraseIt}. Ti va di fare uno scambio?`,
+        `Hi ${nomeAltro}! I saw on Italy Team that you ${tuVerboEn} ${scambiLabel(c)} — ${ioFraseEn}. Want to trade?`,
+        `Salut ${nomeAltro} ! J'ai vu sur Italy Team que tu ${tuVerboFr} ${scambiLabel(c)} — ${ioFraseFr}. Ça te dit un échange ?`
       );
       const link = waLink(numero, waText);
       h += `<div class="scambi-match-card">
         <div class="scambi-match-text">${testoMatch}</div>
-        ${link ? `<a class="scambi-wa-btn" href="${link}" target="_blank" rel="noopener">💬 ${L('Contatta su WhatsApp','Contact on WhatsApp','Contacter sur WhatsApp')}</a>` : `<span class="scambi-empty">${L('Nessun numero WhatsApp condiviso da questo giocatore.','No WhatsApp number shared by this player.','Aucun numéro WhatsApp partagé par ce joueur.')}</span>`}
+        ${link ? `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <a class="scambi-wa-btn" href="${link}" target="_blank" rel="noopener">💬 ${L('Contatta su WhatsApp','Contact on WhatsApp','Contacter sur WhatsApp')}</a>
+          <button class="scambi-copy-btn" onclick="copyWaNumber('${numero.replace(/[^\d+]/g,'')}', this)">📋 ${L('Copia numero','Copy number','Copier le numéro')}</button>
+        </div>` : `<span class="scambi-empty">${L('Nessun numero WhatsApp condiviso da questo giocatore.','No WhatsApp number shared by this player.','Aucun numéro WhatsApp partagé par ce joueur.')}</span>`}
       </div>`;
     });
   }
