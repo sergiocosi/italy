@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.10 — 18 ago 2026 (Ranking: vista d\'insieme trasversale su tutte le discipline con punti di forza/debolezza)';
+const APP_VERSION='v1.11 — 19 ago 2026 (Inventario: livello complessivo + confronto tra due giocatori)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -2861,6 +2861,154 @@ const INV_GROUPS = [
 const DISC_KEYS = ['100m','200m','400m','800m','1500m','5000m','10000m','marathon','110h','400h','3000s','lj','tj','hj','pv','sp','dt','ht','jt'];
 const DISC_LABELS = {'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','marathon':'Marathon','110h':'110H / 100H','400h':'400H','3000s':'3000S','lj':'Lungo / LJ','tj':'Triplo / TJ','hj':'Alto / HJ','pv':'Asta / PV','sp':'Peso / SP','dt':'Disco / DT','ht':'Martello / HT','jt':'Giavellotto / JT'};
 
+// ── CONFRONTO INVENTARI ─────────────────────────────────────────
+// Prefissi colonna per sezione, usati per sommare i "_value" di italy_inventory
+function invCmpSections() {
+  const g = INV_GROUPS.map(x=>x.key);
+  return [
+    {key:'coach',  emoji:'💧', label:L('Allenatori','Coaches','Entraîneurs'),
+      prefixes: g.map(k=>'coach_'+k)},
+    {key:'athlm',  emoji:'🔥', label:L('Atleti — Uomini','Athletes — Men','Athlètes — Hommes'),
+      prefixes: ['athlete_m_dec', ...g.map(k=>'athlete_m_'+k)]},
+    {key:'athlf',  emoji:'🔥', label:L('Atleti — Donne','Athletes — Women','Athlètes — Femmes'),
+      prefixes: ['athlete_f_hep', ...g.map(k=>'athlete_f_'+k)]},
+    {key:'cenm',   emoji:'🏟', label:L('Centro — Uomini','Training Centre — Men','Centre — Hommes'),
+      prefixes: DISC_KEYS.map(dk=>'center_m_'+dk)},
+    {key:'cenf',   emoji:'🏟', label:L('Centro — Donne','Training Centre — Women','Centre — Femmes'),
+      prefixes: DISC_KEYS.map(dk=>'center_f_'+dk)},
+    {key:'gearm',  emoji:'👕', label:L('Attrezzatura — Uomini','Equipment — Men','Équipement — Hommes'),
+      prefixes: ['jersey','shorts','shoes'].flatMap(pc=>DISC_KEYS.map(dk=>pc+'_m_'+dk))},
+    {key:'gearf',  emoji:'👕', label:L('Attrezzatura — Donne','Equipment — Women','Équipement — Femmes'),
+      prefixes: ['jersey','shorts','shoes'].flatMap(pc=>DISC_KEYS.map(dk=>pc+'_f_'+dk))},
+  ];
+}
+function sumVal(inv, prefixes) {
+  return prefixes.reduce((s,pfx)=> s + (inv[pfx+'_value']||0), 0);
+}
+function fmtInt(n){ return n.toLocaleString('it-IT'); }
+function cmpDeltaSpan(delta) {
+  if(delta===0) return `<span style="color:var(--text3)">= 0</span>`;
+  const col = delta>0 ? 'var(--green)' : 'var(--red)';
+  const sign = delta>0 ? '+' : '';
+  return `<span style="color:${col};font-weight:700">${sign}${fmtInt(delta)}</span>`;
+}
+
+function renderInvComparison() {
+  const aId = document.getElementById('cmp_player_a')?.value;
+  const bId = document.getElementById('cmp_player_b')?.value;
+  const out = document.getElementById('inv-cmp-result');
+  if(!out) return;
+  if(!aId || !bId) {
+    out.innerHTML = `<div class="alert a-warn">${L('Seleziona due giocatori diversi.','Select two different players.','Sélectionnez deux joueurs différents.')}</div>`;
+    return;
+  }
+  if(aId === bId) {
+    out.innerHTML = `<div class="alert a-warn">${L('I due giocatori devono essere diversi.','The two players must be different.','Les deux joueurs doivent être différents.')}</div>`;
+    return;
+  }
+  const nameA = allPlayers.find(p=>p.id===aId)?.name || aId;
+  const nameB = allPlayers.find(p=>p.id===bId)?.name || bId;
+  const invA = inventoryData[aId] || {};
+  const invB = inventoryData[bId] || {};
+  const sections = invCmpSections();
+
+  // Totali per sezione + gran totale
+  let totA=0, totB=0;
+  const rows = sections.map(s=>{
+    const va = sumVal(invA, s.prefixes);
+    const vb = sumVal(invB, s.prefixes);
+    totA += va; totB += vb;
+    return {...s, va, vb, delta: vb-va};
+  });
+
+  const lvlA = invA.player_level!=null ? invA.player_level : '—';
+  const lvlB = invB.player_level!=null ? invB.player_level : '—';
+  const trofA = trofeiData?.current?.[aId]?.trofei;
+  const trofB = trofeiData?.current?.[bId]?.trofei;
+
+  let h = `<div style="overflow-x:auto;margin-top:6px">
+    <table>
+      <thead><tr>
+        <th></th><th style="text-align:right">${nameA}</th><th style="text-align:right">${nameB}</th><th style="text-align:right">Δ (${nameB}-${nameA})</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:600">🎚 ${t('level')}</td>
+          <td style="text-align:right;font-family:var(--mono)">${lvlA}</td>
+          <td style="text-align:right;font-family:var(--mono)">${lvlB}</td>
+          <td style="text-align:right">${(lvlA!=='—'&&lvlB!=='—')?cmpDeltaSpan(lvlB-lvlA):'—'}</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">🏆 ${t('trofei_pts')}</td>
+          <td style="text-align:right;font-family:var(--mono)">${trofA!=null?fmtInt(trofA):'—'}</td>
+          <td style="text-align:right;font-family:var(--mono)">${trofB!=null?fmtInt(trofB):'—'}</td>
+          <td style="text-align:right">${(trofA!=null&&trofB!=null)?cmpDeltaSpan(trofB-trofA):'—'}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:16px 0 8px;font-family:var(--mono)">${L('VALORE INVENTARIO PER SEZIONE','INVENTORY VALUE BY SECTION','VALEUR INVENTAIRE PAR SECTION')}</div>
+  <div style="overflow-x:auto"><table>
+    <thead><tr>
+      <th>${L('Sezione','Section','Section')}</th><th style="text-align:right">${nameA}</th><th style="text-align:right">${nameB}</th><th style="text-align:right">Δ</th>
+    </tr></thead>
+    <tbody>`;
+  rows.forEach(r=>{
+    h += `<tr>
+      <td>${r.emoji} ${r.label}</td>
+      <td style="text-align:right;font-family:var(--mono)">${fmtInt(r.va)}</td>
+      <td style="text-align:right;font-family:var(--mono)">${fmtInt(r.vb)}</td>
+      <td style="text-align:right">${cmpDeltaSpan(r.delta)}</td>
+    </tr>`;
+  });
+  h += `<tr style="font-weight:700;border-top:2px solid var(--border2)">
+      <td>${L('TOTALE','TOTAL','TOTAL')}</td>
+      <td style="text-align:right;font-family:var(--mono)">${fmtInt(totA)}</td>
+      <td style="text-align:right;font-family:var(--mono)">${fmtInt(totB)}</td>
+      <td style="text-align:right">${cmpDeltaSpan(totB-totA)}</td>
+    </tr>
+    </tbody></table></div>
+  <p style="font-size:11px;color:var(--text3);margin-top:8px">
+    ${L('💡 "Valore" = somma di tutti i punti spesi/investiti (il numero che vedi nel gioco per ogni allenatore, atleta, centro e capo di attrezzatura), sommato su tutta la sezione. Misura quanto è stato investito in quella parte del roster, non la resa in partita.','💡 "Value" = sum of all points spent/invested (the number shown in-game for each coach, athlete, training centre and gear item), added up across the whole section. It measures how much was invested in that part of the roster, not in-match performance.','💡 « Valeur » = somme de tous les points dépensés/investis (le nombre affiché dans le jeu pour chaque entraîneur, athlète, centre et pièce d\'équipement), additionnée sur toute la section. Mesure l\'investissement dans cette partie de l\'effectif, pas la performance en match.')}
+  </p>`;
+
+  // Top differenze per categoria (allenatori/atleti) + per disciplina (centro/attrezzatura)
+  const catDeltas = [];
+  INV_GROUPS.forEach(g=>{
+    ['coach','athlete_m','athlete_f'].forEach(pfx=>{
+      const key = pfx+'_'+g.key;
+      const va = invA[key+'_value']||0, vb = invB[key+'_value']||0;
+      if(va||vb) catDeltas.push({label:`${pfx==='coach'?'💧':'🔥'} ${g.key.toUpperCase()} ${pfx!=='coach'?(pfx==='athlete_m'?'(M)':'(F)'):''}`, delta:vb-va});
+    });
+  });
+  DISC_KEYS.forEach(dk=>{
+    ['center_m','center_f'].forEach(pfx=>{
+      const va = invA[pfx+'_'+dk+'_value']||0, vb = invB[pfx+'_'+dk+'_value']||0;
+      if(va||vb) catDeltas.push({label:`🏟 ${DISC_LABELS[dk]} ${pfx==='center_m'?'(M)':'(F)'}`, delta:vb-va});
+    });
+    ['m','f'].forEach(sex=>{
+      const va = ['jersey','shorts','shoes'].reduce((s,pc)=>s+(invA[pc+'_'+sex+'_'+dk+'_value']||0),0);
+      const vb = ['jersey','shorts','shoes'].reduce((s,pc)=>s+(invB[pc+'_'+sex+'_'+dk+'_value']||0),0);
+      if(va||vb) catDeltas.push({label:`👕 ${DISC_LABELS[dk]} ${sex==='m'?'(M)':'(F)'}`, delta:vb-va});
+    });
+  });
+  const topB = catDeltas.filter(d=>d.delta>0).sort((a,b)=>b.delta-a.delta).slice(0,5);
+  const topA = catDeltas.filter(d=>d.delta<0).sort((a,b)=>a.delta-b.delta).slice(0,5);
+
+  h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">💪 ${nameA} ${L('avanti su','ahead on','en tête sur')}</div>
+      ${topA.length?topA.map(d=>`<div style="font-size:12px;padding:4px 0;display:flex;justify-content:space-between"><span>${d.label}</span>${cmpDeltaSpan(d.delta)}</div>`).join(''):`<div style="font-size:11px;color:var(--text3)">—</div>`}
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">💪 ${nameB} ${L('avanti su','ahead on','en tête sur')}</div>
+      ${topB.length?topB.map(d=>`<div style="font-size:12px;padding:4px 0;display:flex;justify-content:space-between"><span>${d.label}</span>${cmpDeltaSpan(d.delta)}</div>`).join(''):`<div style="font-size:11px;color:var(--text3)">—</div>`}
+    </div>
+  </div>`;
+
+  out.innerHTML = h;
+}
+
 function toggleColl(id) {
   const body = document.getElementById('coll-body-'+id);
   const arrow = document.getElementById('coll-arrow-'+id);
@@ -3213,6 +3361,25 @@ function renderInventarioTab() {
         💾 ${L('Scarica file JSON','Download JSON file','Télécharger le fichier JSON')}
       </button>
     </div>
+  </div>`;
+
+  // CONFRONTO TRA DUE GIOCATORI
+  const cmpPlayers = allPlayers.filter(p=>p.active!==false);
+  h += `<div class="card">
+    <div class="card-title">⚖️ ${L('Confronto tra due giocatori','Compare two players','Comparer deux joueurs')}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">${L('Confronta inventario, livello e trofei tra due membri del club.','Compare inventory, level and trophies between two club members.','Comparez inventaire, niveau et trophées entre deux membres du club.')}</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <select id="cmp_player_a" style="font-size:14px;padding:8px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);min-width:160px">
+        ${cmpPlayers.map(p=>`<option value="${p.id}"${p.id===targetPlayer?' selected':''}>${p.name}</option>`).join('')}
+      </select>
+      <span style="font-size:12px;color:var(--text3)">${L('vs','vs','vs')}</span>
+      <select id="cmp_player_b" style="font-size:14px;padding:8px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);min-width:160px">
+        <option value="">— ${L('seleziona','select','sélectionner')} —</option>
+        ${cmpPlayers.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <button class="btn-primary-sm" onclick="renderInvComparison()">${L('Confronta','Compare','Comparer')}</button>
+    </div>
+    <div id="inv-cmp-result"></div>
   </div>`;
 
   document.getElementById('inventario-content').innerHTML = h;
