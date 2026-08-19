@@ -2515,6 +2515,7 @@ async function renderTrofei(){
       <thead><tr>
         <th>#</th><th>${t('trofei_player')}</th>
         <th>${t('trofei_pts')}</th><th>${t('trofei_trend')}</th>
+        <th>${t('level')}</th>
       </tr></thead><tbody>`;
     sorted.forEach((p,i)=>{
       const cur=currData[p.id]||{}, prv=prevData[p.id]||{};
@@ -2524,6 +2525,7 @@ async function renderTrofei(){
         <td style="font-weight:600">${p.name}${badge}</td>
         <td style="font-family:var(--mono);font-weight:700">${cur.trofei!=null?cur.trofei.toLocaleString():'—'}</td>
         <td>${trendArrow(cur.trofei,prv.trofei)}</td>
+        <td style="font-family:var(--mono);font-weight:700">${cur.livello!=null?cur.livello:'—'} ${trendArrow(cur.livello,prv.livello)}</td>
       </tr>`;
     });
     h+=`</tbody></table></div>`;
@@ -2728,6 +2730,7 @@ async function publishSnapshot(){
     const {player_id:_pid, id:_id, updated_at:_ua, ...pbFields}=draft;
     const data={
       ...pbFields,
+      livello: inventoryData[p.id]?.player_level ?? null,
       week_id:weekData.id,
       player_id:p.id,
       updated_at:new Date().toISOString()
@@ -3098,6 +3101,20 @@ function renderInventarioTab() {
     </div>`;
   }
 
+  // -1. LIVELLO GIOCATORE
+  const lvlVal = inv['player_level'] != null ? inv['player_level'] : '';
+  const lvlHTML = `<div class="inv-grid">
+    <div class="inv-pair">
+      <div class="inv-pair-label">${L('Livello complessivo','Overall level','Niveau global')}</div>
+      <div class="inv-pair-inputs">
+        <input type="number" id="inv_player_level" min="1" max="150" step="1" value="${lvlVal}"
+          placeholder="es. 55"
+          style="width:100%;max-width:140px;padding:6px 10px;font-size:14px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--bg1);color:var(--text1);font-family:var(--font);text-align:right">
+      </div>
+    </div>
+  </div>`;
+  h += collCard('livello', '🎚', L('Livello','Level','Niveau'), lvlHTML, 'livello');
+
   // 0. RISORSE
   const risorseItems = [
     { key: 'monete', label: L('🪙 Monete','🪙 Coins','🪙 Pièces')         },
@@ -3209,6 +3226,7 @@ function setInvAdminPlayer() {
 
 // ── INVENTORY SAVE ───────────────────────────────────────────
 const INV_SECTION_KEYS = {
+  livello: ['player_level'],
   risorse: ['monete','gemme','ac','ct'],
   coach: ['sr','mr','lr','h','j','t'].flatMap(g=>['coach_'+g+'_level','coach_'+g+'_value']),
   athlm: ['dec','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_m_'+g+'_level','athlete_m_'+g+'_value']),
@@ -3975,6 +3993,7 @@ function exportMyData(mode) {
   const out = {
     giocatore: targetPlayer,
     esportato: new Date().toLocaleString('it-IT'),
+    livello_giocatore: inv['player_level'] ?? null,
     allenatori,
     atleti_m,
     atleti_f,
