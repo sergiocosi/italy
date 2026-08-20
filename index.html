@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.11 — 19 ago 2026 (Inventario: livello complessivo + confronto tra due giocatori)';
+const APP_VERSION='v1.12 — 19 ago 2026 (Confronto: trofei da bozza più recente; Attrezzatura: vista per disciplina)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -2923,8 +2923,8 @@ function renderInvComparison() {
 
   const lvlA = invA.player_level!=null ? invA.player_level : '—';
   const lvlB = invB.player_level!=null ? invB.player_level : '—';
-  const trofA = trofeiData?.current?.[aId]?.trofei;
-  const trofB = trofeiData?.current?.[bId]?.trofei;
+  const trofA = pbDrafts[aId]?.trofei ?? trofeiData?.current?.[aId]?.trofei;
+  const trofB = pbDrafts[bId]?.trofei ?? trofeiData?.current?.[bId]?.trofei;
 
   let h = `<div style="overflow-x:auto;margin-top:6px">
     <table>
@@ -3111,6 +3111,45 @@ function invPair(prefix, label, inv, step=100, lookupType=null) {
       <input type="number" id="inv_${prefix}_value" min="0" step="${step}" value="${vl}" placeholder="Val" ${isLocked?'readonly':''} style="${valStyle}">
     </div>
   </div>`;
+}
+
+// Gruppi di disciplina per la vista "Per disciplina" dell'attrezzatura (stesse chiavi di GRP_NAMES)
+function GEAR_GROUPS(){return[
+  {key:'SR', discs:['100m','200m','400m']},
+  {key:'MR', discs:['800m','1500m']},
+  {key:'LR', discs:['5000m','10000m','marathon']},
+  {key:'H',  discs:['110h','400h','3000s']},
+  {key:'J',  discs:['lj','tj','hj','pv']},
+  {key:'T',  discs:['sp','dt','ht','jt']},
+];}
+
+// Corpo delle card Attrezzatura M/F: toggle tra vista "Per tipo" (maglia/pantaloni/scarpe) e "Per disciplina" (SR/MR/LR/H/J/T)
+function renderGearBody(sex, inv, gearPieces) {
+  const mode = window.gearViewMode || 'tipo';
+  const btnStyle = (active) => `padding:5px 12px;font-size:11px;font-weight:700;border-radius:var(--radius);border:1.5px solid var(--border2);cursor:pointer;font-family:var(--font);background:${active?'var(--royal)':'var(--bg2)'};color:${active?'#fff':'var(--text2)'}`;
+  let body = `<div style="display:flex;gap:6px;margin-bottom:10px">
+    <button onclick="window.gearViewMode='tipo';renderInventarioTab()" style="${btnStyle(mode==='tipo')}">${L('Per tipo','By type','Par type')}</button>
+    <button onclick="window.gearViewMode='disc';renderInventarioTab()" style="${btnStyle(mode==='disc')}">${L('Per disciplina','By event','Par épreuve')}</button>
+  </div>`;
+
+  if (mode === 'disc') {
+    GEAR_GROUPS().forEach(grp => {
+      body += `<div class="inv-sub">${GRP_NAMES(grp.key)}</div><div class="inv-grid">`;
+      grp.discs.forEach(dk => {
+        gearPieces.forEach(({key,label}) => {
+          body += invPair(key+'_'+sex+'_'+dk, `${DISC_LABELS[dk]} · ${label}`, inv, 10);
+        });
+      });
+      body += '</div>';
+    });
+  } else {
+    gearPieces.forEach(({key,label}) => {
+      body += `<div class="inv-sub">${label}</div><div class="inv-grid">`;
+      DISC_KEYS.forEach(dk => { body += invPair(key+'_'+sex+'_'+dk, DISC_LABELS[dk], inv, 10); });
+      body += '</div>';
+    });
+  }
+  return body;
 }
 
 // ── Variante invPair con id "inv2_" — usata per la ridondanza Allenatore nel tab Dati CC ──
@@ -3329,21 +3368,11 @@ function renderInventarioTab() {
     {key:'shorts',  label:L('Pantaloni','Shorts','Short')},
     {key:'shoes',   label:L('Scarpe','Shoes','Chaussures')},
   ];
-  let gearMHTML = '';
-  gearPieces.forEach(({key,label}) => {
-    gearMHTML += `<div class="inv-sub">${label}</div><div class="inv-grid">`;
-    DISC_KEYS.forEach(dk => { gearMHTML += invPair(key+'_m_'+dk, DISC_LABELS[dk], inv, 10); });
-    gearMHTML += '</div>';
-  });
+  let gearMHTML = renderGearBody('m', inv, gearPieces);
   h += collCard('gearm', '👕', L('Attrezzatura — Uomini','Equipment — Men','Équipement — Hommes'), gearMHTML, 'gearm');
 
   // 7. ATTREZZATURA F
-  let gearFHTML = '';
-  gearPieces.forEach(({key,label}) => {
-    gearFHTML += `<div class="inv-sub">${label}</div><div class="inv-grid">`;
-    DISC_KEYS.forEach(dk => { gearFHTML += invPair(key+'_f_'+dk, DISC_LABELS[dk], inv, 10); });
-    gearFHTML += '</div>';
-  });
+  let gearFHTML = renderGearBody('f', inv, gearPieces);
   h += collCard('gearf', '👕', L('Attrezzatura — Donne','Equipment — Women','Équipement — Femmes'), gearFHTML, 'gearf');
 
   // PROGRESSIONE UPGRADE
