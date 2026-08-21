@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.12 — 19 ago 2026 (Confronto: trofei da bozza più recente; Attrezzatura: vista per disciplina)';
+const APP_VERSION='v1.13 — 21 ago 2026 (Inventario: analisi economica monete — speso/mancante per livello 15; Confronto: analisi strategica con upgrade consigliato per sezione)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -3006,6 +3006,35 @@ function renderInvComparison() {
     </div>
   </div>`;
 
+  // ANALISI ECONOMICA E STRATEGICA — per giocatore: speso/mancante/% completo/resa per sezione
+  // + prossimo upgrade più conveniente (rapporto guadagno-valore / costo) in ciascuna area.
+  // Nota: la "resa" (valore di gioco per 1000 monete) va confrontata SOLO all'interno della
+  // stessa sezione tra i due giocatori — le scale di valore di coach/atleta/centro/carte sono
+  // tabelle diverse (INV_LOOKUP), un confronto incrociato tra sezioni sarebbe fuorviante.
+  function renderPlayerCoinBlock(name, coinA) {
+    let s = `<div style="font-size:12px;font-weight:700;margin-bottom:8px">${name}</div>
+      <div style="font-size:11px;margin-bottom:10px">
+        💰 ${L('Speso','Spent','Dépensé')}: <strong style="font-family:var(--mono)">${fmtInt(coinA.totSpeso)}</strong> ·
+        💸 ${L('Mancante','Missing','Manquant')}: <strong style="font-family:var(--mono)">${fmtInt(coinA.totMancante)}</strong>
+      </div>`;
+    coinA.rows.forEach(r => {
+      s += `<div style="padding:6px 0;border-bottom:1px solid var(--border1)">
+        <div style="font-size:11px;font-weight:600">${r.emoji} ${r.label} <span style="font-weight:400;color:var(--text3)">${r.pct!=null?'· '+r.pct.toFixed(0)+'%':''}</span></div>
+        <div style="font-size:10px;color:var(--text3)">${L('Speso','Spent','Dépensé')} ${fmtInt(r.speso)} · ${L('Mancante','Missing','Manquant')} ${fmtInt(r.mancante)} · ${L('Resa/1k','Value/1k','Valeur/1k')} ${r.roiPer1000!=null?r.roiPer1000.toFixed(1):'—'}</div>
+        ${r.best ? `<div style="font-size:10px;color:var(--green);margin-top:2px">👉 ${L('Consigliato','Suggested','Suggéré')}: ${r.best.label} → Lv${r.best.toLevel} (${fmtInt(r.best.cost)}🪙, +${fmtInt(r.best.gain)} val)</div>` : ''}
+      </div>`;
+    });
+    return s;
+  }
+  const coinA = playerCoinAnalysis(invA);
+  const coinB = playerCoinAnalysis(invB);
+  h += `<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:20px 0 8px;font-family:var(--mono)">${L('ANALISI ECONOMICA E STRATEGICA','ECONOMIC & STRATEGIC ANALYSIS','ANALYSE ÉCONOMIQUE ET STRATÉGIQUE')}</div>
+  <p style="font-size:11px;color:var(--text3);margin-bottom:10px">${L('Per ciascun giocatore: monete spese/mancanti per sezione e il singolo upgrade più conveniente al passo successivo (miglior rapporto valore guadagnato / costo). Confronta la resa solo tra le stesse sezioni dei due giocatori, non tra sezioni diverse.','For each player: coins spent/missing per section and the single best-value next upgrade (best value-gained / cost ratio). Compare returns only within the same section between the two players, not across different sections.','Pour chaque joueur : pièces dépensées/manquantes par section et la meilleure prochaine amélioration (meilleur rapport valeur gagnée / coût). Comparez le rendement uniquement entre les mêmes sections des deux joueurs, pas entre sections différentes.')}</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>${renderPlayerCoinBlock(nameA, coinA)}</div>
+    <div>${renderPlayerCoinBlock(nameB, coinB)}</div>
+  </div>`;
+
   out.innerHTML = h;
 }
 
@@ -3060,6 +3089,129 @@ function invLookupValue(lookupType, level) {
   if (!lookupType || !INV_LOOKUP[lookupType]) return null;
   const lv = parseInt(level);
   return isNaN(lv) ? null : (INV_LOOKUP[lookupType][lv] ?? null);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ANALISI ECONOMICA (monete): quanto è stato speso per arrivare al
+// livello attuale di ogni elemento e quanto manca per portarlo a 15.
+// Tabella costi marginali (costo per passare dal livello k-1 al k),
+// fornita da Sergio in chat — stessa curva per "carte" (attrezzatura,
+// colore indifferente), un'unica curva per allenatori+atleti, una per
+// il centro allenamento. Il livello di "nascita" di ogni elemento è
+// derivato dal lookupType già usato per INV_LOOKUP (stat di gioco).
+// ══════════════════════════════════════════════════════════════
+const COIN_COST_ARR = {
+  carte:             {4:50, 5:150, 6:400, 7:1000, 8:2000, 9:4000, 10:8000, 11:20000, 12:50000, 13:100000, 14:125000, 15:150000},
+  allenatore_atleta: {10:5000, 11:20000, 12:50000, 13:100000, 14:125000, 15:150000},
+  centro:            {2:5, 3:20, 4:50, 5:150, 6:400, 7:1000, 8:2000, 9:4000, 10:8000, 11:20000, 12:50000, 13:100000, 14:125000, 15:150000},
+};
+// Mappa lookupType (di INV_LOOKUP) -> {costCategory, birth livello di nascita}
+const COIN_COST_META = {
+  coach:      {cat:'allenatore_atleta', birth:9},
+  atleta:     {cat:'allenatore_atleta', birth:9},
+  universale: {cat:'allenatore_atleta', birth:9},
+  centro:     {cat:'centro',            birth:1},
+  blu:        {cat:'carte',             birth:3},
+  verde:      {cat:'carte',             birth:3},
+  viola:      {cat:'carte',             birth:6},
+  oro:        {cat:'carte',             birth:9},
+};
+
+// Calcola speso/mancante/prossimo-upgrade per un singolo elemento (coach, atleta, centro o pezzo di attrezzatura)
+function coinAnalyzeItem(lookupType, level) {
+  const meta = COIN_COST_META[lookupType];
+  if (!meta) return {spent:0, missing:0, curVal:0, nextCost:null, nextGain:null, nextRatio:null, nextToLevel:null};
+  const arr = COIN_COST_ARR[meta.cat];
+  const birth = meta.birth;
+  const hasLevel = level !== null && level !== undefined && level !== '';
+  const lvl = hasLevel ? parseInt(level) : birth;
+
+  let spent = 0, missing = 0;
+  for (let k = birth+1; k <= 15; k++) {
+    const c = arr[k] || 0;
+    if (k <= lvl) spent += c; else missing += c;
+  }
+  const curVal = hasLevel ? (INV_LOOKUP[lookupType]?.[lvl] ?? 0) : 0;
+
+  let nextCost=null, nextGain=null, nextRatio=null, nextToLevel=null;
+  if (lvl < 15) {
+    const nl = Math.max(lvl+1, birth+1);
+    const cost = arr[nl];
+    if (cost) {
+      const curV = INV_LOOKUP[lookupType]?.[lvl] ?? 0;
+      const nxtV = INV_LOOKUP[lookupType]?.[nl];
+      if (nxtV != null) {
+        nextCost = cost; nextToLevel = nl;
+        nextGain = nxtV - curV;
+        nextRatio = cost > 0 ? nextGain / cost : null;
+      }
+    }
+  }
+  return {spent, missing, curVal, nextCost, nextGain, nextRatio, nextToLevel};
+}
+
+// Liste elementi per sezione (stessa suddivisione usata in invCmpSections)
+function coinCoachItems(inv) {
+  return INV_GROUPS.map(g => ({ key:'coach_'+g.key, label:g.key.toUpperCase(), lookupType:'coach', level:inv['coach_'+g.key+'_level'] }));
+}
+function coinAthleteItems(inv, sex) {
+  const items = [];
+  if (sex === 'm') items.push({ key:'athlete_m_dec', label:'DEC', lookupType:'universale', level:inv['athlete_m_dec_level'] });
+  else items.push({ key:'athlete_f_hep', label:'HEP', lookupType:'universale', level:inv['athlete_f_hep_level'] });
+  INV_GROUPS.forEach(g => {
+    const key = 'athlete_'+sex+'_'+g.key;
+    items.push({ key, label:g.key.toUpperCase(), lookupType:'atleta', level:inv[key+'_level'] });
+  });
+  return items;
+}
+function coinCenterItems(inv, sex) {
+  return DISC_KEYS.map(dk => { const key='center_'+sex+'_'+dk; return { key, label:DISC_LABELS[dk], lookupType:'centro', level:inv[key+'_level'] }; });
+}
+function coinGearItems(inv, sex) {
+  const items = [];
+  ['jersey','shorts','shoes'].forEach(pc => {
+    DISC_KEYS.forEach(dk => {
+      const key = pc+'_'+sex+'_'+dk;
+      const color = GEAR_CARD_COLOR[pc+'_'+dk];
+      items.push({ key, label:`${DISC_LABELS[dk]} · ${pc}`, lookupType:color, level:inv[key+'_level'] });
+    });
+  });
+  return items;
+}
+
+// Aggrega una sezione: speso, mancante, % completamento, resa/1000 monete, miglior prossimo upgrade
+function coinSectionAnalysis(items) {
+  let speso=0, mancante=0, valueSum=0, best=null;
+  items.forEach(it => {
+    const r = coinAnalyzeItem(it.lookupType, it.level);
+    speso += r.spent; mancante += r.missing; valueSum += r.curVal;
+    if (r.nextRatio != null && (!best || r.nextRatio > best.ratio)) {
+      best = { label:it.label, cost:r.nextCost, gain:r.nextGain, ratio:r.nextRatio, toLevel:r.nextToLevel };
+    }
+  });
+  const pct = (speso+mancante) > 0 ? (speso/(speso+mancante)*100) : null;
+  const roiPer1000 = speso > 0 ? (valueSum/speso)*1000 : null;
+  return { speso, mancante, pct, roiPer1000, best };
+}
+
+// Analisi economica completa di un giocatore (7 sezioni + totale)
+function playerCoinAnalysis(inv) {
+  const sections = [
+    {key:'coach', emoji:'💧', label:L('Allenatori','Coaches','Entraîneurs'),                        items:coinCoachItems(inv)},
+    {key:'athlm', emoji:'🔥', label:L('Atleti — Uomini','Athletes — Men','Athlètes — Hommes'),        items:coinAthleteItems(inv,'m')},
+    {key:'athlf', emoji:'🔥', label:L('Atleti — Donne','Athletes — Women','Athlètes — Femmes'),       items:coinAthleteItems(inv,'f')},
+    {key:'cenm',  emoji:'🏟', label:L('Centro — Uomini','Training Centre — Men','Centre — Hommes'),    items:coinCenterItems(inv,'m')},
+    {key:'cenf',  emoji:'🏟', label:L('Centro — Donne','Training Centre — Women','Centre — Femmes'),   items:coinCenterItems(inv,'f')},
+    {key:'gearm', emoji:'👕', label:L('Attrezzatura — Uomini','Equipment — Men','Équipement — Hommes'),items:coinGearItems(inv,'m')},
+    {key:'gearf', emoji:'👕', label:L('Attrezzatura — Donne','Equipment — Women','Équipement — Femmes'),items:coinGearItems(inv,'f')},
+  ];
+  let totSpeso=0, totMancante=0;
+  const rows = sections.map(s => {
+    const a = coinSectionAnalysis(s.items);
+    totSpeso += a.speso; totMancante += a.mancante;
+    return {...s, ...a};
+  });
+  return { rows, totSpeso, totMancante };
 }
 
 function onInvLevelChange(prefix, lookupType) {
@@ -3301,6 +3453,45 @@ function renderInventarioTab() {
     </div>
   </div>`;
   h += collCard('livello', '🎚', L('Livello','Level','Niveau'), lvlHTML, 'livello');
+
+  // ANALISI ECONOMICA — quanto speso finora e quanto manca al livello 15 su tutto l'inventario
+  {
+    const coinA = playerCoinAnalysis(inv);
+    let coinHTML = `<div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th>${L('Sezione','Section','Section')}</th>
+        <th style="text-align:right">${L('Speso','Spent','Dépensé')}</th>
+        <th style="text-align:right">${L('Mancante','Missing','Manquant')}</th>
+        <th style="text-align:right">${L('% completo','% complete','% complet')}</th>
+        <th style="text-align:right">${L('Resa/1000🪙','Value/1k coins','Valeur/1k pièces')}</th>
+      </tr></thead><tbody>`;
+    coinA.rows.forEach(r => {
+      coinHTML += `<tr>
+        <td>${r.emoji} ${r.label}</td>
+        <td style="text-align:right;font-family:var(--mono)">${fmtInt(r.speso)}</td>
+        <td style="text-align:right;font-family:var(--mono)">${fmtInt(r.mancante)}</td>
+        <td style="text-align:right;font-family:var(--mono)">${r.pct!=null?r.pct.toFixed(0)+'%':'—'}</td>
+        <td style="text-align:right;font-family:var(--mono)">${r.roiPer1000!=null?r.roiPer1000.toFixed(1):'—'}</td>
+      </tr>`;
+    });
+    const totPct = (coinA.totSpeso+coinA.totMancante)>0 ? (coinA.totSpeso/(coinA.totSpeso+coinA.totMancante)*100) : null;
+    coinHTML += `<tr style="font-weight:700;border-top:2px solid var(--border2)">
+        <td>${L('TOTALE','TOTAL','TOTAL')}</td>
+        <td style="text-align:right;font-family:var(--mono)">${fmtInt(coinA.totSpeso)}</td>
+        <td style="text-align:right;font-family:var(--mono)">${fmtInt(coinA.totMancante)}</td>
+        <td style="text-align:right;font-family:var(--mono)">${totPct!=null?totPct.toFixed(0)+'%':'—'}</td>
+        <td></td>
+      </tr>
+      </tbody></table></div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px">
+        ${L('💡 Stima basata sui costi in monete per livello di carte, allenatori/atleti e centro allenamento. I livelli di "nascita" di ogni elemento sono approssimati; lo scarto sul totale è trascurabile.','💡 Estimate based on coin costs per level for cards, coaches/athletes and training centre. Each element\'s "birth" level is approximated; the effect on the total is negligible.','💡 Estimation basée sur les coûts en pièces par niveau pour cartes, entraîneurs/athlètes et centre d\'entraînement. Le niveau de "naissance" de chaque élément est approximatif ; l\'écart sur le total est négligeable.')}
+      </p>`;
+    h += `<div class="card">
+      <div class="card-title">💰 ${L('Analisi economica','Economic analysis','Analyse économique')}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px">${L('Quanto hai investito finora in monete e quanto manca per portare tutto al livello 15.','How much you\'ve invested in coins so far and how much is left to bring everything to level 15.','Combien vous avez investi en pièces jusqu\'à présent et ce qu\'il reste pour tout amener au niveau 15.')}</div>
+      ${coinHTML}
+    </div>`;
+  }
 
   // 0. RISORSE
   const risorseItems = [
