@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.13 — 21 ago 2026 (Inventario: analisi economica monete — speso/mancante per livello 15; Confronto: analisi strategica con upgrade consigliato per sezione)';
+const APP_VERSION='v1.14 — 21 ago 2026 (Centro Allenamento: aggiunta Sede Centrale M/F, inclusa in analisi economica, confronto ed export)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -2873,9 +2873,9 @@ function invCmpSections() {
     {key:'athlf',  emoji:'🔥', label:L('Atleti — Donne','Athletes — Women','Athlètes — Femmes'),
       prefixes: ['athlete_f_hep', ...g.map(k=>'athlete_f_'+k)]},
     {key:'cenm',   emoji:'🏟', label:L('Centro — Uomini','Training Centre — Men','Centre — Hommes'),
-      prefixes: DISC_KEYS.map(dk=>'center_m_'+dk)},
+      prefixes: ['center_m_sede', ...DISC_KEYS.map(dk=>'center_m_'+dk)]},
     {key:'cenf',   emoji:'🏟', label:L('Centro — Donne','Training Centre — Women','Centre — Femmes'),
-      prefixes: DISC_KEYS.map(dk=>'center_f_'+dk)},
+      prefixes: ['center_f_sede', ...DISC_KEYS.map(dk=>'center_f_'+dk)]},
     {key:'gearm',  emoji:'👕', label:L('Attrezzatura — Uomini','Equipment — Men','Équipement — Hommes'),
       prefixes: ['jersey','shorts','shoes'].flatMap(pc=>DISC_KEYS.map(dk=>pc+'_m_'+dk))},
     {key:'gearf',  emoji:'👕', label:L('Attrezzatura — Donne','Equipment — Women','Équipement — Femmes'),
@@ -2980,6 +2980,10 @@ function renderInvComparison() {
       const va = invA[key+'_value']||0, vb = invB[key+'_value']||0;
       if(va||vb) catDeltas.push({label:`${pfx==='coach'?'💧':'🔥'} ${g.key.toUpperCase()} ${pfx!=='coach'?(pfx==='athlete_m'?'(M)':'(F)'):''}`, delta:vb-va});
     });
+  });
+  ['center_m','center_f'].forEach(pfx=>{
+    const va = invA[pfx+'_sede_value']||0, vb = invB[pfx+'_sede_value']||0;
+    if(va||vb) catDeltas.push({label:`🏛 ${L('Sede Centrale','Headquarters','Siège central')} ${pfx==='center_m'?'(M)':'(F)'}`, delta:vb-va});
   });
   DISC_KEYS.forEach(dk=>{
     ['center_m','center_f'].forEach(pfx=>{
@@ -3165,7 +3169,9 @@ function coinAthleteItems(inv, sex) {
   return items;
 }
 function coinCenterItems(inv, sex) {
-  return DISC_KEYS.map(dk => { const key='center_'+sex+'_'+dk; return { key, label:DISC_LABELS[dk], lookupType:'centro', level:inv[key+'_level'] }; });
+  const items = [{ key:'center_'+sex+'_sede', label:L('Sede Centrale','Headquarters','Siège central'), lookupType:'centro', level:inv['center_'+sex+'_sede_level'] }];
+  DISC_KEYS.forEach(dk => { const key='center_'+sex+'_'+dk; items.push({ key, label:DISC_LABELS[dk], lookupType:'centro', level:inv[key+'_level'] }); });
+  return items;
 }
 function coinGearItems(inv, sex) {
   const items = [];
@@ -3543,12 +3549,14 @@ function renderInventarioTab() {
 
   // 4. CENTRO M
   let cenMHTML = `<div class="inv-grid">`;
+  cenMHTML += invPair('center_m_sede', '🏛 '+L('Sede Centrale','Headquarters','Siège central'), inv, 50, 'centro');
   DISC_KEYS.forEach(dk => { cenMHTML += invPair('center_m_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenMHTML += '</div>';
   h += collCard('cenm', '🏟', L('Centro Allenamento — Uomini','Training Centre — Men','Centre d\'entraînement — Hommes'), cenMHTML, 'cenm');
 
   // 5. CENTRO F
   let cenFHTML = `<div class="inv-grid">`;
+  cenFHTML += invPair('center_f_sede', '🏛 '+L('Sede Centrale','Headquarters','Siège central'), inv, 50, 'centro');
   DISC_KEYS.forEach(dk => { cenFHTML += invPair('center_f_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenFHTML += '</div>';
   h += collCard('cenf', '🏟', L('Centro Allenamento — Donne','Training Centre — Women','Centre d\'entraînement — Femmes'), cenFHTML, 'cenf');
@@ -3618,8 +3626,8 @@ const INV_SECTION_KEYS = {
   coach: ['sr','mr','lr','h','j','t'].flatMap(g=>['coach_'+g+'_level','coach_'+g+'_value']),
   athlm: ['dec','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_m_'+g+'_level','athlete_m_'+g+'_value']),
   athlf: ['hep','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_f_'+g+'_level','athlete_f_'+g+'_value']),
-  cenm:  DISC_KEYS.flatMap(dk=>['center_m_'+dk+'_level','center_m_'+dk+'_value']),
-  cenf:  DISC_KEYS.flatMap(dk=>['center_f_'+dk+'_level','center_f_'+dk+'_value']),
+  cenm:  ['center_m_sede_level','center_m_sede_value', ...DISC_KEYS.flatMap(dk=>['center_m_'+dk+'_level','center_m_'+dk+'_value'])],
+  cenf:  ['center_f_sede_level','center_f_sede_value', ...DISC_KEYS.flatMap(dk=>['center_f_'+dk+'_level','center_f_'+dk+'_value'])],
   gearm: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_m_'+dk+'_level',p+'_m_'+dk+'_value'])),
   gearf: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_f_'+dk+'_level',p+'_f_'+dk+'_value'])),
 };
@@ -4353,7 +4361,8 @@ function exportMyData(mode) {
   });
 
   // Centro M + F
-  const centro_m = {}, centro_f = {};
+  const centro_m = { sede: { livello: inv['center_m_sede_level'] ?? null, valore: inv['center_m_sede_value'] ?? null } };
+  const centro_f = { sede: { livello: inv['center_f_sede_level'] ?? null, valore: inv['center_f_sede_value'] ?? null } };
   DISC_KEYS.forEach(dk => {
     centro_m[dk] = { livello: inv['center_m_'+dk+'_level'] ?? null, valore: inv['center_m_'+dk+'_value'] ?? null };
     centro_f[dk] = { livello: inv['center_f_'+dk+'_level'] ?? null, valore: inv['center_f_'+dk+'_value'] ?? null };
