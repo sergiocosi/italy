@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.15 — 21 ago 2026 (Fix: Sede Centrale è un campo unico generale, non per sesso)';
+const APP_VERSION='v1.16 — 21 ago 2026 (Centro Allenamento: 7 nuove strutture economiche + rinominata Pista di Atletica per le discipline)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -2874,9 +2874,9 @@ function invCmpSections() {
       prefixes: ['athlete_f_hep', ...g.map(k=>'athlete_f_'+k)]},
     {key:'sede',   emoji:'🏛', label:L('Sede Centrale','Headquarters','Siège central'),
       prefixes: ['center_sede']},
-    {key:'cenm',   emoji:'🏟', label:L('Centro — Uomini','Training Centre — Men','Centre — Hommes'),
+    {key:'cenm',   emoji:'🏟', label:L('Pista — Uomini','Athletics Track — Men','Piste — Hommes'),
       prefixes: DISC_KEYS.map(dk=>'center_m_'+dk)},
-    {key:'cenf',   emoji:'🏟', label:L('Centro — Donne','Training Centre — Women','Centre — Femmes'),
+    {key:'cenf',   emoji:'🏟', label:L('Pista — Donne','Athletics Track — Women','Piste — Femmes'),
       prefixes: DISC_KEYS.map(dk=>'center_f_'+dk)},
     {key:'gearm',  emoji:'👕', label:L('Attrezzatura — Uomini','Equipment — Men','Équipement — Hommes'),
       prefixes: ['jersey','shorts','shoes'].flatMap(pc=>DISC_KEYS.map(dk=>pc+'_m_'+dk))},
@@ -3123,10 +3123,23 @@ const COIN_COST_META = {
   oro:        {cat:'carte',             birth:9},
 };
 
+// Strutture "economiche" del Centro Allenamento: stessa curva costi/livelli del centro,
+// ma NON danno benefici alle prestazioni — distribuiscono casse periodiche di risorse.
+// Campo generale (non per sesso), come la Sede Centrale.
+const STRUTTURE_LIST = [
+  {suffix:'medico',        label:L('Centro Medico','Medical Centre','Centre médical')},
+  {suffix:'trasporto',     label:L('Trasporto','Transport','Transport')},
+  {suffix:'negozio',       label:L('Negozio','Shop','Boutique')},
+  {suffix:'piscina',       label:L('Piscina','Pool','Piscine')},
+  {suffix:'palestra',      label:L('Palestra','Gym','Salle de sport')},
+  {suffix:'ristorante',    label:L('Ristorante','Restaurant','Restaurant')},
+  {suffix:'manutenzione',  label:L('Manutenzione','Maintenance','Maintenance')},
+];
+
 // Calcola speso/mancante/prossimo-upgrade per un singolo elemento (coach, atleta, centro o pezzo di attrezzatura)
-function coinAnalyzeItem(lookupType, level) {
+function coinAnalyzeItem(lookupType, level, trackValue=true) {
   const meta = COIN_COST_META[lookupType];
-  if (!meta) return {spent:0, missing:0, curVal:0, nextCost:null, nextGain:null, nextRatio:null, nextToLevel:null};
+  if (!meta) return {spent:0, missing:0, curVal:null, nextCost:null, nextGain:null, nextRatio:null, nextToLevel:null};
   const arr = COIN_COST_ARR[meta.cat];
   const birth = meta.birth;
   const hasLevel = level !== null && level !== undefined && level !== '';
@@ -3137,19 +3150,21 @@ function coinAnalyzeItem(lookupType, level) {
     const c = arr[k] || 0;
     if (k <= lvl) spent += c; else missing += c;
   }
-  const curVal = hasLevel ? (INV_LOOKUP[lookupType]?.[lvl] ?? 0) : 0;
+  const curVal = trackValue ? (hasLevel ? (INV_LOOKUP[lookupType]?.[lvl] ?? 0) : 0) : null;
 
   let nextCost=null, nextGain=null, nextRatio=null, nextToLevel=null;
   if (lvl < 15) {
     const nl = Math.max(lvl+1, birth+1);
     const cost = arr[nl];
     if (cost) {
-      const curV = INV_LOOKUP[lookupType]?.[lvl] ?? 0;
-      const nxtV = INV_LOOKUP[lookupType]?.[nl];
-      if (nxtV != null) {
-        nextCost = cost; nextToLevel = nl;
-        nextGain = nxtV - curV;
-        nextRatio = cost > 0 ? nextGain / cost : null;
+      nextCost = cost; nextToLevel = nl;
+      if (trackValue) {
+        const curV = INV_LOOKUP[lookupType]?.[lvl] ?? 0;
+        const nxtV = INV_LOOKUP[lookupType]?.[nl];
+        if (nxtV != null) {
+          nextGain = nxtV - curV;
+          nextRatio = cost > 0 ? nextGain / cost : null;
+        }
       }
     }
   }
@@ -3176,6 +3191,14 @@ function coinCenterItems(inv, sex) {
 function coinSedeItems(inv) {
   return [{ key:'center_sede', label:L('Sede Centrale','Headquarters','Siège central'), lookupType:'centro', level:inv['center_sede_level'] }];
 }
+// Strutture "economiche": stessa curva costi del centro, ma nessun beneficio prestazionale
+// (danno casse periodiche di risorse) — quindi trackValue:false, escluse dal calcolo Resa/ROI.
+function coinStruttureItems(inv) {
+  return STRUTTURE_LIST.map(s => ({
+    key:'struttura_'+s.suffix, label:s.label, lookupType:'centro',
+    level:inv['struttura_'+s.suffix+'_level'], trackValue:false,
+  }));
+}
 function coinGearItems(inv, sex) {
   const items = [];
   ['jersey','shorts','shoes'].forEach(pc => {
@@ -3189,29 +3212,32 @@ function coinGearItems(inv, sex) {
 }
 
 // Aggrega una sezione: speso, mancante, % completamento, resa/1000 monete, miglior prossimo upgrade
+// (la resa/ROI è calcolata SOLO sugli item con trackValue!==false — le strutture economiche restano fuori)
 function coinSectionAnalysis(items) {
-  let speso=0, mancante=0, valueSum=0, best=null;
+  let speso=0, mancante=0, valueSum=0, best=null, anyValue=false;
   items.forEach(it => {
-    const r = coinAnalyzeItem(it.lookupType, it.level);
-    speso += r.spent; mancante += r.missing; valueSum += r.curVal;
+    const r = coinAnalyzeItem(it.lookupType, it.level, it.trackValue !== false);
+    speso += r.spent; mancante += r.missing;
+    if (r.curVal != null) { valueSum += r.curVal; anyValue = true; }
     if (r.nextRatio != null && (!best || r.nextRatio > best.ratio)) {
       best = { label:it.label, cost:r.nextCost, gain:r.nextGain, ratio:r.nextRatio, toLevel:r.nextToLevel };
     }
   });
   const pct = (speso+mancante) > 0 ? (speso/(speso+mancante)*100) : null;
-  const roiPer1000 = speso > 0 ? (valueSum/speso)*1000 : null;
+  const roiPer1000 = (anyValue && speso > 0) ? (valueSum/speso)*1000 : null;
   return { speso, mancante, pct, roiPer1000, best };
 }
 
-// Analisi economica completa di un giocatore (7 sezioni + totale)
+// Analisi economica completa di un giocatore (9 sezioni + totale)
 function playerCoinAnalysis(inv) {
   const sections = [
     {key:'coach', emoji:'💧', label:L('Allenatori','Coaches','Entraîneurs'),                        items:coinCoachItems(inv)},
     {key:'athlm', emoji:'🔥', label:L('Atleti — Uomini','Athletes — Men','Athlètes — Hommes'),        items:coinAthleteItems(inv,'m')},
     {key:'athlf', emoji:'🔥', label:L('Atleti — Donne','Athletes — Women','Athlètes — Femmes'),       items:coinAthleteItems(inv,'f')},
     {key:'sede',  emoji:'🏛', label:L('Sede Centrale','Headquarters','Siège central'),                items:coinSedeItems(inv)},
-    {key:'cenm',  emoji:'🏟', label:L('Centro — Uomini','Training Centre — Men','Centre — Hommes'),    items:coinCenterItems(inv,'m')},
-    {key:'cenf',  emoji:'🏟', label:L('Centro — Donne','Training Centre — Women','Centre — Femmes'),   items:coinCenterItems(inv,'f')},
+    {key:'strutture', emoji:'🏢', label:L('Altre strutture','Other facilities','Autres structures'),  items:coinStruttureItems(inv)},
+    {key:'cenm',  emoji:'🏟', label:L('Pista — Uomini','Athletics Track — Men','Piste — Hommes'),      items:coinCenterItems(inv,'m')},
+    {key:'cenf',  emoji:'🏟', label:L('Pista — Donne','Athletics Track — Women','Piste — Femmes'),     items:coinCenterItems(inv,'f')},
     {key:'gearm', emoji:'👕', label:L('Attrezzatura — Uomini','Equipment — Men','Équipement — Hommes'),items:coinGearItems(inv,'m')},
     {key:'gearf', emoji:'👕', label:L('Attrezzatura — Donne','Equipment — Women','Équipement — Femmes'),items:coinGearItems(inv,'f')},
   ];
@@ -3551,21 +3577,26 @@ function renderInventarioTab() {
   athlFHTML += '</div>';
   h += collCard('athlf', '🔥', L('Atleti — Donne','Athletes — Women','Athlètes — Femmes'), athlFHTML, 'athlf');
 
-  // 3b. SEDE CENTRALE — generale, non è per sesso (comune a tutto il centro allenamento)
-  const sedeHTML = `<div class="inv-grid">${invPair('center_sede', '🏛 '+L('Sede Centrale','Headquarters','Siège central'), inv, 50, 'centro')}</div>`;
-  h += collCard('sede', '🏛', L('Sede Centrale','Headquarters','Siège central'), sedeHTML, 'sede');
+  // 3b. CENTRO ALLENAMENTO (generale) — Sede Centrale + strutture economiche, non per sesso.
+  // Nota: quella che qui chiamiamo "Pista — Uomini/Donne" più sotto è la ex "Centro Allenamento
+  // per disciplina": il vero Centro Allenamento è l'insieme di Sede + Pista + queste strutture.
+  let centroGenHTML = `<div class="inv-grid">`;
+  centroGenHTML += invPair('center_sede', '🏛 '+L('Sede Centrale','Headquarters','Siège central'), inv, 50, 'centro');
+  STRUTTURE_LIST.forEach(s => { centroGenHTML += invPair('struttura_'+s.suffix, s.label, inv, 50); });
+  centroGenHTML += '</div>';
+  h += collCard('centrogen', '🏢', L('Centro Allenamento','Training Centre','Centre d\'entraînement'), centroGenHTML, 'centrogen');
 
-  // 4. CENTRO M
+  // 4. PISTA M (ex "Centro Allenamento — Uomini": bonus prestazione per disciplina)
   let cenMHTML = `<div class="inv-grid">`;
   DISC_KEYS.forEach(dk => { cenMHTML += invPair('center_m_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenMHTML += '</div>';
-  h += collCard('cenm', '🏟', L('Centro Allenamento — Uomini','Training Centre — Men','Centre d\'entraînement — Hommes'), cenMHTML, 'cenm');
+  h += collCard('cenm', '🏟', L('Pista di Atletica — Uomini','Athletics Track — Men','Piste d\'athlétisme — Hommes'), cenMHTML, 'cenm');
 
-  // 5. CENTRO F
+  // 5. PISTA F
   let cenFHTML = `<div class="inv-grid">`;
   DISC_KEYS.forEach(dk => { cenFHTML += invPair('center_f_'+dk, DISC_LABELS[dk], inv, 50, 'centro'); });
   cenFHTML += '</div>';
-  h += collCard('cenf', '🏟', L('Centro Allenamento — Donne','Training Centre — Women','Centre d\'entraînement — Femmes'), cenFHTML, 'cenf');
+  h += collCard('cenf', '🏟', L('Pista di Atletica — Donne','Athletics Track — Women','Piste d\'athlétisme — Femmes'), cenFHTML, 'cenf');
 
   // 6. ATTREZZATURA M
   const gearPieces = [
@@ -3634,7 +3665,7 @@ const INV_SECTION_KEYS = {
   athlf: ['hep','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_f_'+g+'_level','athlete_f_'+g+'_value']),
   cenm:  DISC_KEYS.flatMap(dk=>['center_m_'+dk+'_level','center_m_'+dk+'_value']),
   cenf:  DISC_KEYS.flatMap(dk=>['center_f_'+dk+'_level','center_f_'+dk+'_value']),
-  sede:  ['center_sede_level','center_sede_value'],
+  centrogen: ['center_sede_level','center_sede_value', ...STRUTTURE_LIST.flatMap(s=>['struttura_'+s.suffix+'_level','struttura_'+s.suffix+'_value'])],
   gearm: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_m_'+dk+'_level',p+'_m_'+dk+'_value'])),
   gearf: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_f_'+dk+'_level',p+'_f_'+dk+'_value'])),
 };
@@ -4370,6 +4401,12 @@ function exportMyData(mode) {
   // Sede Centrale (generale, comune a M e F)
   const sede_centrale = { livello: inv['center_sede_level'] ?? null, valore: inv['center_sede_value'] ?? null };
 
+  // Altre strutture (generali, nessun beneficio prestazionale — danno casse periodiche)
+  const strutture = {};
+  STRUTTURE_LIST.forEach(s => {
+    strutture[s.suffix] = { livello: inv['struttura_'+s.suffix+'_level'] ?? null, valore: inv['struttura_'+s.suffix+'_value'] ?? null };
+  });
+
   // Centro M + F
   const centro_m = {}, centro_f = {};
   DISC_KEYS.forEach(dk => {
@@ -4403,6 +4440,7 @@ function exportMyData(mode) {
     atleti_m,
     atleti_f,
     sede_centrale,
+    strutture,
     centro_m,
     centro_f,
     attrezzatura_m: gear.M,
