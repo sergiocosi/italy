@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.16 — 21 ago 2026 (Centro Allenamento: 7 nuove strutture economiche + rinominata Pista di Atletica per le discipline)';
+const APP_VERSION='v1.17 — 21 ago 2026 (Fix: Sede Centrale e strutture solo livello, niente valore; rimossa dal confronto valore-sezione)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -2872,8 +2872,6 @@ function invCmpSections() {
       prefixes: ['athlete_m_dec', ...g.map(k=>'athlete_m_'+k)]},
     {key:'athlf',  emoji:'🔥', label:L('Atleti — Donne','Athletes — Women','Athlètes — Femmes'),
       prefixes: ['athlete_f_hep', ...g.map(k=>'athlete_f_'+k)]},
-    {key:'sede',   emoji:'🏛', label:L('Sede Centrale','Headquarters','Siège central'),
-      prefixes: ['center_sede']},
     {key:'cenm',   emoji:'🏟', label:L('Pista — Uomini','Athletics Track — Men','Piste — Hommes'),
       prefixes: DISC_KEYS.map(dk=>'center_m_'+dk)},
     {key:'cenf',   emoji:'🏟', label:L('Pista — Donne','Athletics Track — Women','Piste — Femmes'),
@@ -2983,10 +2981,6 @@ function renderInvComparison() {
       if(va||vb) catDeltas.push({label:`${pfx==='coach'?'💧':'🔥'} ${g.key.toUpperCase()} ${pfx!=='coach'?(pfx==='athlete_m'?'(M)':'(F)'):''}`, delta:vb-va});
     });
   });
-  {
-    const va = invA['center_sede_value']||0, vb = invB['center_sede_value']||0;
-    if(va||vb) catDeltas.push({label:`🏛 ${L('Sede Centrale','Headquarters','Siège central')}`, delta:vb-va});
-  }
   DISC_KEYS.forEach(dk=>{
     ['center_m','center_f'].forEach(pfx=>{
       const va = invA[pfx+'_'+dk+'_value']||0, vb = invB[pfx+'_'+dk+'_value']||0;
@@ -3189,7 +3183,7 @@ function coinCenterItems(inv, sex) {
   return DISC_KEYS.map(dk => { const key='center_'+sex+'_'+dk; return { key, label:DISC_LABELS[dk], lookupType:'centro', level:inv[key+'_level'] }; });
 }
 function coinSedeItems(inv) {
-  return [{ key:'center_sede', label:L('Sede Centrale','Headquarters','Siège central'), lookupType:'centro', level:inv['center_sede_level'] }];
+  return [{ key:'center_sede', label:L('Sede Centrale','Headquarters','Siège central'), lookupType:'centro', level:inv['center_sede_level'], trackValue:false }];
 }
 // Strutture "economiche": stessa curva costi del centro, ma nessun beneficio prestazionale
 // (danno casse periodiche di risorse) — quindi trackValue:false, escluse dal calcolo Resa/ROI.
@@ -3297,6 +3291,18 @@ function invPair(prefix, label, inv, step=100, lookupType=null) {
     <div class="inv-pair-inputs">
       <input class="lv-input" type="number" id="inv_${prefix}_level" min="1" max="15" step="1" value="${lv}" placeholder="Lv" ${onchange}>
       <input type="number" id="inv_${prefix}_value" min="0" step="${step}" value="${vl}" placeholder="Val" ${isLocked?'readonly':''} style="${valStyle}">
+    </div>
+  </div>`;
+}
+
+// Variante "solo livello": per elementi senza un valore-carta corrispettivo
+// (Sede Centrale e le strutture economiche del Centro Allenamento) — niente campo Valore.
+function invLevelOnly(prefix, label, inv) {
+  const lv = inv[prefix+'_level'] != null ? inv[prefix+'_level'] : '';
+  return `<div class="inv-pair">
+    <div class="inv-pair-label">${label}</div>
+    <div class="inv-pair-inputs">
+      <input class="lv-input" type="number" id="inv_${prefix}_level" min="1" max="15" step="1" value="${lv}" placeholder="Lv">
     </div>
   </div>`;
 }
@@ -3581,8 +3587,8 @@ function renderInventarioTab() {
   // Nota: quella che qui chiamiamo "Pista — Uomini/Donne" più sotto è la ex "Centro Allenamento
   // per disciplina": il vero Centro Allenamento è l'insieme di Sede + Pista + queste strutture.
   let centroGenHTML = `<div class="inv-grid">`;
-  centroGenHTML += invPair('center_sede', '🏛 '+L('Sede Centrale','Headquarters','Siège central'), inv, 50, 'centro');
-  STRUTTURE_LIST.forEach(s => { centroGenHTML += invPair('struttura_'+s.suffix, s.label, inv, 50); });
+  centroGenHTML += invLevelOnly('center_sede', '🏛 '+L('Sede Centrale','Headquarters','Siège central'), inv);
+  STRUTTURE_LIST.forEach(s => { centroGenHTML += invLevelOnly('struttura_'+s.suffix, s.label, inv); });
   centroGenHTML += '</div>';
   h += collCard('centrogen', '🏢', L('Centro Allenamento','Training Centre','Centre d\'entraînement'), centroGenHTML, 'centrogen');
 
@@ -3665,7 +3671,7 @@ const INV_SECTION_KEYS = {
   athlf: ['hep','sr','mr','lr','h','j','t'].flatMap(g=>['athlete_f_'+g+'_level','athlete_f_'+g+'_value']),
   cenm:  DISC_KEYS.flatMap(dk=>['center_m_'+dk+'_level','center_m_'+dk+'_value']),
   cenf:  DISC_KEYS.flatMap(dk=>['center_f_'+dk+'_level','center_f_'+dk+'_value']),
-  centrogen: ['center_sede_level','center_sede_value', ...STRUTTURE_LIST.flatMap(s=>['struttura_'+s.suffix+'_level','struttura_'+s.suffix+'_value'])],
+  centrogen: ['center_sede_level', ...STRUTTURE_LIST.map(s=>'struttura_'+s.suffix+'_level')],
   gearm: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_m_'+dk+'_level',p+'_m_'+dk+'_value'])),
   gearf: ['jersey','shorts','shoes'].flatMap(p=>DISC_KEYS.flatMap(dk=>[p+'_f_'+dk+'_level',p+'_f_'+dk+'_value'])),
 };
@@ -4398,13 +4404,13 @@ function exportMyData(mode) {
     };
   });
 
-  // Sede Centrale (generale, comune a M e F)
-  const sede_centrale = { livello: inv['center_sede_level'] ?? null, valore: inv['center_sede_value'] ?? null };
+  // Sede Centrale (generale, comune a M e F — nessun valore-carta, solo livello)
+  const sede_centrale = { livello: inv['center_sede_level'] ?? null };
 
-  // Altre strutture (generali, nessun beneficio prestazionale — danno casse periodiche)
+  // Altre strutture (generali, nessun beneficio prestazionale — danno casse periodiche, solo livello)
   const strutture = {};
   STRUTTURE_LIST.forEach(s => {
-    strutture[s.suffix] = { livello: inv['struttura_'+s.suffix+'_level'] ?? null, valore: inv['struttura_'+s.suffix+'_value'] ?? null };
+    strutture[s.suffix] = { livello: inv['struttura_'+s.suffix+'_level'] ?? null };
   });
 
   // Centro M + F
