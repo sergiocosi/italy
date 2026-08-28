@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.17 — 21 ago 2026 (Fix: Sede Centrale e strutture solo livello, niente valore; rimossa dal confronto valore-sezione)';
+const APP_VERSION='v1.18 — 28 ago 2026 (Trofei: fallback su ultimo snapshot pubblicato se settimana vuota; nuovo confronto testa a testa tra 2 giocatori con radar su percentile PB reali)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -2461,6 +2461,64 @@ function pbGroups(){return[
   {key:'T', label:t('grp_throws'),discs:['SP','DT','HT','JT']},
 ];}
 
+// ── CONFRONTO TESTA A TESTA (basato su PB reali, percentile club) ──
+// Stima del "vero valore" di un giocatore su una disciplina usando il PB
+// reale (che cambia poco) invece del punteggio CC (falsato ogni settimana
+// dall'attrezzatura). Percentile 0-100 sulla classifica club per quella
+// disciplina/genere: 100 = migliore PB del club, 0 = peggiore.
+function computePBPercentiles(gender, dataSource){
+  const players = allPlayers.filter(p=>p.active!==false && !p.guest);
+  const result = {};
+  DISCS.forEach(d=>{
+    const isFld = FIELD_EVENTS.has(d);
+    const col = PB_COL[gender][d];
+    const arr = players
+      .map(p=>({id:p.id, val:(dataSource[p.id]||{})[col]}))
+      .filter(x=>x.val!=null && x.val!=='' && parseFloat(x.val)>0)
+      .sort((a,b)=> isFld ? b.val-a.val : a.val-b.val); // migliore per primo
+    const n = arr.length;
+    const map={};
+    arr.forEach((x,i)=>{
+      const rank=i+1;
+      const pct = n<=1 ? 100 : Math.round(100*(n-rank)/(n-1));
+      map[x.id]={value:x.val, rank, n, pct};
+    });
+    result[d]=map;
+  });
+  return result;
+}
+
+// Genera l'SVG del radar a 19 assi per due giocatori sovrapposti.
+function renderHeadToHeadRadar(discs, pctA, pctB, colorA, colorB, size){
+  size = size||380;
+  const cx=size/2, cy=size/2, R=size*0.34;
+  const n=discs.length;
+  const angleFor=i=> -Math.PI/2 + i*(2*Math.PI/n);
+  const pt=(i,r)=>{ const a=angleFor(i); return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; };
+  let grid='';
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const pts=discs.map((d,i)=>pt(i,R*f).join(',')).join(' ');
+    grid+=`<polygon points="${pts}" fill="none" stroke="var(--border2)" stroke-width="1" opacity="${f===1?0.7:0.35}"/>`;
+  });
+  let spokes='', labels='';
+  discs.forEach((d,i)=>{
+    const [x,y]=pt(i,R);
+    spokes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--border2)" stroke-width="1" opacity="0.35"/>`;
+    const [lx,ly]=pt(i,R+16);
+    labels+=`<text x="${lx}" y="${ly}" font-size="9" font-family="var(--mono)" fill="var(--text3)" text-anchor="middle" dominant-baseline="middle">${DISC_SHORT[d]||d}</text>`;
+  });
+  const polyPts = (valsMap)=> discs.map((d,i)=>{
+    const v = valsMap[d]!=null ? valsMap[d].pct : 0;
+    return pt(i, R*(v/100)).join(',');
+  }).join(' ');
+  return `<svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:420px;display:block;margin:0 auto">
+    ${grid}${spokes}
+    <polygon points="${polyPts(pctA)}" fill="${colorA}" fill-opacity="0.16" stroke="${colorA}" stroke-width="2"/>
+    <polygon points="${polyPts(pctB)}" fill="${colorB}" fill-opacity="0.16" stroke="${colorB}" stroke-width="2"/>
+    ${labels}
+  </svg>`;
+}
+
 // ── RENDER TROFEI ────────────────────────────────────────────────
 let pbViewGender='M'; // toggle stato leaderboard PB
 
@@ -2490,6 +2548,13 @@ async function renderTrofei(){
   }
 
   const hasCurrent = Object.keys(currData).length>0;
+  const isActiveWeekView = !selWeekId || selWeekId === (weekData?weekData.id:null);
+  const fallbackActive = isActiveWeekView && !hasCurrent && Object.keys(prevData).length>0;
+  const fallbackWeek = fallbackActive ? (window.allWeeks||[]).find(w=>w.id < (weekData?weekData.id:selWeekId)) : null;
+  // Dati effettivamente mostrati: se non c'è ancora uno snapshot per la settimana attiva,
+  // ripieghiamo sull'ultimo snapshot pubblicato invece di mostrare tutto vuoto.
+  const dispData = fallbackActive ? prevData : currData;
+  const dispHasData = fallbackActive || hasCurrent;
   const targetPlayer = isAdmin&&adminActingAs ? adminActingAs : currentUser.id;
   // Per l'editing usiamo i draft (aggiornabili liberamente)
   // Per overview e classifica usiamo i snapshot ufficiali (italy_trofei)
@@ -2506,11 +2571,19 @@ async function renderTrofei(){
       <span style="font-size:11px;color:var(--text3)">← ${L('storico settimane','weekly history','historique des semaines')}</span>
     </div>`;
 
-  if(!hasCurrent){
+  if(fallbackActive){
+    h+=`<div class="alert a-info">${L(
+      `⏳ Nessun dato ancora pubblicato per questa settimana — in visualizzazione l'ultimo snapshot ufficiale${fallbackWeek?` (<strong>${fallbackWeek.label}</strong>)`:''}.`,
+      `⏳ No data published yet for this week — showing the last official snapshot${fallbackWeek?` (<strong>${fallbackWeek.label}</strong>)`:''}.`,
+      `⏳ Aucune donnée publiée pour cette semaine — affichage du dernier instantané officiel${fallbackWeek?` (<strong>${fallbackWeek.label}</strong>)`:''}.`
+    )}</div>`;
+  }
+
+  if(!dispHasData){
     h+=`<div class="alert a-warn">${t('trofei_no_data')}</div>`;
   } else {
-    const sorted=allPlayers.filter(p=>currData[p.id])
-      .sort((a,b)=>(currData[b.id].trofei||0)-(currData[a.id].trofei||0));
+    const sorted=allPlayers.filter(p=>dispData[p.id])
+      .sort((a,b)=>(dispData[b.id].trofei||0)-(dispData[a.id].trofei||0));
     h+=`<div style="overflow-x:auto"><table>
       <thead><tr>
         <th>#</th><th>${t('trofei_player')}</th>
@@ -2518,14 +2591,15 @@ async function renderTrofei(){
         <th>${t('level')}</th>
       </tr></thead><tbody>`;
     sorted.forEach((p,i)=>{
-      const cur=currData[p.id]||{}, prv=prevData[p.id]||{};
+      const cur=dispData[p.id]||{};
+      const prv=fallbackActive?{}:(prevData[p.id]||{});
       const badge=TOP_NAMES.has(p.id)?` <span class="badge b-top" style="font-size:9px">TOP</span>`:'';
       h+=`<tr>
         <td style="font-family:var(--mono);color:var(--text3);font-weight:700">${i+1}</td>
         <td style="font-weight:600">${p.name}${badge}</td>
         <td style="font-family:var(--mono);font-weight:700">${cur.trofei!=null?cur.trofei.toLocaleString():'—'}</td>
-        <td>${trendArrow(cur.trofei,prv.trofei)}</td>
-        <td style="font-family:var(--mono);font-weight:700">${cur.livello!=null?cur.livello:'—'} ${trendArrow(cur.livello,prv.livello)}</td>
+        <td>${fallbackActive?'<span style="color:var(--text3)">—</span>':trendArrow(cur.trofei,prv.trofei)}</td>
+        <td style="font-family:var(--mono);font-weight:700">${cur.livello!=null?cur.livello:'—'} ${fallbackActive?'':trendArrow(cur.livello,prv.livello)}</td>
       </tr>`;
     });
     h+=`</tbody></table></div>`;
@@ -2614,9 +2688,17 @@ async function renderTrofei(){
 
   const pbCol = PB_COL[pbGen][pbDisc];
   const ranked = allPlayers
-    .filter(p=>trofeiData.current[p.id]&&trofeiData.current[p.id][pbCol]!=null)
-    .map(p=>({p, cur:trofeiData.current[p.id][pbCol], prv:(trofeiData.previous[p.id]||{})[pbCol]}))
+    .filter(p=>dispData[p.id]&&dispData[p.id][pbCol]!=null)
+    .map(p=>({p, cur:dispData[p.id][pbCol], prv:fallbackActive?null:(prevData[p.id]||{})[pbCol]}))
     .sort((a,b)=> isFld ? b.cur-a.cur : a.cur-b.cur);
+
+  if(fallbackActive){
+    h+=`<div class="alert a-info">${L(
+      `⏳ Nessun dato ancora pubblicato per questa settimana — in visualizzazione l'ultimo snapshot ufficiale${fallbackWeek?` (<strong>${fallbackWeek.label}</strong>)`:''}.`,
+      `⏳ No data published yet for this week — showing the last official snapshot${fallbackWeek?` (<strong>${fallbackWeek.label}</strong>)`:''}.`,
+      `⏳ Aucune donnée publiée pour cette semaine — affichage du dernier instantané officiel${fallbackWeek?` (<strong>${fallbackWeek.label}</strong>)`:''}.`
+    )}</div>`;
+  }
 
   if(!ranked.length){
     h+=`<div class="alert a-warn">${t('trofei_no_data')}</div>`;
@@ -2624,7 +2706,7 @@ async function renderTrofei(){
     h+=`<div style="overflow-x:auto"><table>
       <thead><tr>
         <th>#</th><th>${t('trofei_player')}</th>
-        <th>${L('Settimana corrente','Current week','Semaine en cours')}</th>
+        <th>${fallbackActive?L('Ultimo snapshot','Last snapshot','Dernier instantané'):L('Settimana corrente','Current week','Semaine en cours')}</th>
         <th>${L('Settimana prec.','Prev. week','Semaine préc.')}</th>
         <th>${t('trofei_trend')}</th>
       </tr></thead><tbody>`;
@@ -2634,15 +2716,99 @@ async function renderTrofei(){
         <td style="font-family:var(--mono);color:var(--text3);font-weight:700">${i+1}</td>
         <td style="font-weight:600">${p.name}${badge}</td>
         <td style="font-family:var(--mono);font-weight:700">${formatPB(cur,pbDisc)}</td>
-        <td style="font-family:var(--mono);color:var(--text3)">${formatPB(prv,pbDisc)}</td>
-        <td>${trendArrow(cur,prv,!isFld)}</td>
+        <td style="font-family:var(--mono);color:var(--text3)">${prv!=null?formatPB(prv,pbDisc):'—'}</td>
+        <td>${fallbackActive?'<span style="color:var(--text3)">—</span>':trendArrow(cur,prv,!isFld)}</td>
       </tr>`;
     });
     h+=`</tbody></table></div>`;
   }
   h+=`</div>`;
 
+  // ── 4. CONFRONTO TESTA A TESTA ────────────────────────────────
+  const h2hPlayers = allPlayers.filter(p=>p.active!==false && !p.guest);
+  if(!window.h2hPlayerA || !h2hPlayers.some(p=>p.id===window.h2hPlayerA)) window.h2hPlayerA = h2hPlayers[0]?.id;
+  if(!window.h2hPlayerB || !h2hPlayers.some(p=>p.id===window.h2hPlayerB) || window.h2hPlayerB===window.h2hPlayerA)
+    window.h2hPlayerB = (h2hPlayers.find(p=>p.id!==window.h2hPlayerA)||{}).id;
+  const h2hGen = window.h2hGender||'M';
+  const h2hA = window.h2hPlayerA, h2hB = window.h2hPlayerB;
 
+  h+=`<div class="card">
+    <div class="card-title">${L('⚔️ Confronto tra due giocatori','⚔️ Head-to-head comparison','⚔️ Comparaison entre deux joueurs')}</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+      ${L('Confronto basato sui <strong>Personal Best reali</strong> (percentile in classifica club per disciplina) — un valore più stabile del punteggio CC, che cambia ogni settimana con l\'attrezzatura.','Comparison based on <strong>real Personal Bests</strong> (club ranking percentile per event) — a more stable measure than the CC score, which changes weekly with equipment.','Comparaison basée sur les <strong>véritables records personnels</strong> (percentile du classement du club par épreuve) — une mesure plus stable que le score CC, qui change chaque semaine avec l\'équipement.')}
+    </p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+      <select id="h2h-sel-a" onchange="window.h2hPlayerA=this.value;renderTrofei()"
+        style="font-size:13px;padding:7px 12px;border:1.5px solid var(--royal);border-radius:var(--radius);background:var(--bg2);font-weight:600;color:var(--royal)">
+        ${h2hPlayers.map(p=>`<option value="${p.id}"${p.id===h2hA?' selected':''}>${p.name}</option>`).join('')}
+      </select>
+      <span style="font-size:12px;color:var(--text3);font-weight:700">${L('vs','vs','vs')}</span>
+      <select id="h2h-sel-b" onchange="window.h2hPlayerB=this.value;renderTrofei()"
+        style="font-size:13px;padding:7px 12px;border:1.5px solid var(--purple);border-radius:var(--radius);background:var(--bg2);font-weight:600;color:var(--purple)">
+        ${h2hPlayers.map(p=>`<option value="${p.id}"${p.id===h2hB?' selected':''}>${p.name}</option>`).join('')}
+      </select>
+      <div style="display:flex;border:1.5px solid var(--border2);border-radius:var(--radius);overflow:hidden;margin-left:auto">
+        <button onclick="window.h2hGender='M';renderTrofei()"
+          style="padding:7px 16px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:${h2hGen==='M'?'#0070d0':'var(--bg2)'};color:${h2hGen==='M'?'#fff':'var(--text2)'}">🔵 M</button>
+        <button onclick="window.h2hGender='F';renderTrofei()"
+          style="padding:7px 16px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:${h2hGen==='F'?'#c0002a':'var(--bg2)'};color:${h2hGen==='F'?'#fff':'var(--text2)'}">🔴 F</button>
+      </div>
+    </div>`;
+
+  if(!h2hA || !h2hB){
+    h+=`<div class="alert a-warn">${t('trofei_no_data')}</div>`;
+  } else {
+    const pctData = computePBPercentiles(h2hGen, dispData);
+    const nameA = h2hPlayers.find(p=>p.id===h2hA)?.name||h2hA;
+    const nameB = h2hPlayers.find(p=>p.id===h2hB)?.name||h2hB;
+    const pctA={}, pctB={};
+    DISCS.forEach(d=>{ pctA[d]=pctData[d][h2hA]||null; pctB[d]=pctData[d][h2hB]||null; });
+
+    h+=`<div style="display:flex;justify-content:center;gap:24px;margin-bottom:6px;font-size:12px;font-weight:700">
+      <span style="color:var(--royal)">● ${nameA}</span>
+      <span style="color:var(--purple)">● ${nameB}</span>
+    </div>`;
+    h+=renderHeadToHeadRadar(DISCS, pctA, pctB, 'var(--royal)', 'var(--purple)');
+
+    h+=`<div style="overflow-x:auto;margin-top:18px"><table>
+      <thead><tr>
+        <th>${L('Disciplina','Event','Épreuve')}</th>
+        <th style="color:var(--royal)">${nameA}</th>
+        <th style="color:var(--royal)">%</th>
+        <th style="color:var(--purple)">${nameB}</th>
+        <th style="color:var(--purple)">%</th>
+        <th>${L('Vantaggio','Edge','Avantage')}</th>
+      </tr></thead><tbody>`;
+    let lastGrp=null;
+    DISCS.forEach(d=>{
+      const sep = GRP[d]!==lastGrp; lastGrp=GRP[d];
+      const a=pctA[d], b=pctB[d];
+      const valA = a? formatPB(a.value,d) : '—';
+      const valB = b? formatPB(b.value,d) : '—';
+      const pA = a?a.pct:null, pB = b?b.pct:null;
+      let edge='<span style="color:var(--text3)">—</span>';
+      if(pA!=null && pB!=null && pA!==pB){
+        const winner = pA>pB ? nameA : nameB;
+        const winnerColor = pA>pB ? 'var(--royal)' : 'var(--purple)';
+        edge = `<span style="color:${winnerColor};font-weight:700">${winner} (+${Math.abs(pA-pB)})</span>`;
+      } else if(pA!=null && pB!=null && pA===pB){
+        edge = `<span style="color:var(--text3)">=</span>`;
+      }
+      h+=`<tr${sep?' style="border-top:2px solid var(--border2)"':''}>
+        <td style="font-weight:600">${pbLabel(d,h2hGen)}</td>
+        <td style="font-family:var(--mono)">${valA}</td>
+        <td style="font-family:var(--mono);color:var(--text3)">${pA!=null?pA:'—'}</td>
+        <td style="font-family:var(--mono)">${valB}</td>
+        <td style="font-family:var(--mono);color:var(--text3)">${pB!=null?pB:'—'}</td>
+        <td>${edge}</td>
+      </tr>`;
+    });
+    h+=`</tbody></table></div>
+    <p style="font-size:11px;color:var(--text3);margin-top:10px">
+      ${L('Percentile calcolato sui PB pubblicati di tutto il club per quella disciplina/genere. "—" = nessun PB inserito.','Percentile computed on the whole club\'s published PBs for that event/gender. "—" = no PB entered.','Percentile calculé sur les records publiés de tout le club pour cette épreuve/ce genre. "—" = aucun record renseigné.')}
+    </p>`;
+  }
+  h+=`</div>`;
 
   el.innerHTML=h;
 }
