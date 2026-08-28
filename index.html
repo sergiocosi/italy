@@ -558,7 +558,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Versione build — aggiorna a mano questa riga ogni volta che carichi un nuovo index.html,
 // così in fondo alla pagina di login vedi subito se è online la versione giusta.
-const APP_VERSION='v1.18 — 28 ago 2026 (Trofei: fallback su ultimo snapshot pubblicato se settimana vuota; nuovo confronto testa a testa tra 2 giocatori con radar su percentile PB reali)';
+const APP_VERSION='v1.20 — 28 ago 2026 (Confronto testa a testa: dettaglio espandibile per disciplina con maglia/pantaloncini/scarpe/atleta/allenatore/centro dall\'Inventario)';
 
 const DISCS=['100m','200m','400m','800m','1500m','5000m','10000m','Marathon','110H','400H','3000S','LJ','TJ','HJ','PV','SP','DT','HT','JT'];
 const DL={'100m':'100m','200m':'200m','400m':'400m','800m':'800m','1500m':'1500m','5000m':'5000m','10000m':'10000m','Marathon':'Maratona / Marathon','110H':'110H / 100H','400H':'400H','3000S':'3000S','LJ':'Lungo / LJ','TJ':'Triplo / TJ','HJ':'Alto / HJ','PV':'Asta / PV','SP':'Peso / SP','DT':'Disco / DT','HT':'Martello / HT','JT':'Giavellotto / JT'};
@@ -2519,6 +2519,19 @@ function renderHeadToHeadRadar(discs, pctA, pctB, colorA, colorB, size){
   </svg>`;
 }
 
+// Toggle riga di dettaglio granulare (maglia/pantaloncini/scarpe/atleta/allenatore/centro)
+function toggleH2HRow(id, btn){
+  const r=document.getElementById(id);
+  if(!r) return;
+  const show = r.style.display==='none';
+  r.style.display = show?'table-row':'none';
+  if(btn) btn.textContent = show?'▾':'▸';
+}
+function toggleAllH2HRows(show){
+  document.querySelectorAll('.h2h-detail-row').forEach(r=>{ r.style.display=show?'table-row':'none'; });
+  document.querySelectorAll('.h2h-toggle-btn').forEach(b=>{ b.textContent=show?'▾':'▸'; });
+}
+
 // ── RENDER TROFEI ────────────────────────────────────────────────
 let pbViewGender='M'; // toggle stato leaderboard PB
 
@@ -2735,7 +2748,7 @@ async function renderTrofei(){
   h+=`<div class="card">
     <div class="card-title">${L('⚔️ Confronto tra due giocatori','⚔️ Head-to-head comparison','⚔️ Comparaison entre deux joueurs')}</div>
     <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
-      ${L('Confronto basato sui <strong>Personal Best reali</strong> (percentile in classifica club per disciplina) — un valore più stabile del punteggio CC, che cambia ogni settimana con l\'attrezzatura.','Comparison based on <strong>real Personal Bests</strong> (club ranking percentile per event) — a more stable measure than the CC score, which changes weekly with equipment.','Comparaison basée sur les <strong>véritables records personnels</strong> (percentile du classement du club par épreuve) — une mesure plus stable que le score CC, qui change chaque semaine avec l\'équipement.')}
+      ${L('Il radar mostra il percentile sui <strong>Personal Best reali</strong> — un valore più stabile del punteggio CC, che cambia ogni settimana con l\'attrezzatura. Nella tabella sotto, apri il dettaglio (▸) di ogni disciplina per confrontare anche <strong>maglia, pantaloncini, scarpe, atleta, allenatore e centro allenamento</strong>: utile per capire, a parità di materiale, chi lo sta sfruttando meglio.','The radar shows the percentile on <strong>real Personal Bests</strong> — a more stable measure than the CC score, which changes weekly with equipment. In the table below, expand the detail (▸) of any event to also compare <strong>jersey, shorts, shoes, athlete, coach and training centre</strong>: useful to see, with equal gear, who is making better use of it.','Le radar montre le percentile des <strong>véritables records personnels</strong> — une mesure plus stable que le score CC, qui change chaque semaine avec l\'équipement. Dans le tableau ci-dessous, ouvrez le détail (▸) de chaque épreuve pour comparer aussi <strong>maillot, short, chaussures, athlète, entraîneur et centre d\'entraînement</strong> : utile pour voir, à matériel égal, qui l\'exploite le mieux.')}
     </p>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
       <select id="h2h-sel-a" onchange="window.h2hPlayerA=this.value;renderTrofei()"
@@ -2770,42 +2783,86 @@ async function renderTrofei(){
     </div>`;
     h+=renderHeadToHeadRadar(DISCS, pctA, pctB, 'var(--royal)', 'var(--purple)');
 
-    h+=`<div style="overflow-x:auto;margin-top:18px"><table>
+    h+=`<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;font-size:11px">
+      <a href="#" onclick="toggleAllH2HRows(true);return false" style="color:var(--royal);font-weight:600">${L('Espandi tutto','Expand all','Tout développer')}</a>
+      <a href="#" onclick="toggleAllH2HRows(false);return false" style="color:var(--text3);font-weight:600">${L('Comprimi tutto','Collapse all','Tout réduire')}</a>
+    </div>
+    <div style="overflow-x:auto;margin-top:8px"><table>
       <thead><tr>
+        <th></th>
         <th>${L('Disciplina','Event','Épreuve')}</th>
         <th style="color:var(--royal)">${nameA}</th>
-        <th style="color:var(--royal)">%</th>
         <th style="color:var(--purple)">${nameB}</th>
-        <th style="color:var(--purple)">%</th>
-        <th>${L('Vantaggio','Edge','Avantage')}</th>
+        <th>${L('Vantaggio PB','PB edge','Avantage record')}</th>
       </tr></thead><tbody>`;
     let lastGrp=null;
+    const invA=inventoryData[h2hA]||{}, invB=inventoryData[h2hB]||{};
+    const genderKey = h2hGen.toLowerCase();
+    // Riga di un singolo componente nel pannello di dettaglio
+    const compRow=(emoji,label,vA,vB)=>{
+      let edge='<span style="color:var(--text3)">—</span>';
+      if(vA!=null && vB!=null && vA!==vB){
+        const winner = vA>vB?nameA:nameB, col = vA>vB?'var(--royal)':'var(--purple)';
+        edge = `<span style="color:${col};font-weight:700">${winner} (+${Math.abs(vA-vB).toLocaleString()})</span>`;
+      } else if(vA!=null && vB!=null){
+        edge = `<span style="color:var(--text3)">=</span>`;
+      }
+      return `<tr>
+        <td></td>
+        <td style="font-size:12px;color:var(--text2)">${emoji} ${label}</td>
+        <td style="font-family:var(--mono)">${vA!=null?vA.toLocaleString():'—'}</td>
+        <td style="font-family:var(--mono)">${vB!=null?vB.toLocaleString():'—'}</td>
+        <td style="font-size:11px">${edge}</td>
+      </tr>`;
+    };
     DISCS.forEach(d=>{
       const sep = GRP[d]!==lastGrp; lastGrp=GRP[d];
       const a=pctA[d], b=pctB[d];
-      const valA = a? formatPB(a.value,d) : '—';
-      const valB = b? formatPB(b.value,d) : '—';
+      const pbValA = a? formatPB(a.value,d) : '—';
+      const pbValB = b? formatPB(b.value,d) : '—';
       const pA = a?a.pct:null, pB = b?b.pct:null;
-      let edge='<span style="color:var(--text3)">—</span>';
-      if(pA!=null && pB!=null && pA!==pB){
-        const winner = pA>pB ? nameA : nameB;
-        const winnerColor = pA>pB ? 'var(--royal)' : 'var(--purple)';
-        edge = `<span style="color:${winnerColor};font-weight:700">${winner} (+${Math.abs(pA-pB)})</span>`;
-      } else if(pA!=null && pB!=null && pA===pB){
-        edge = `<span style="color:var(--text3)">=</span>`;
-      }
+      const rowId = 'h2h-detail-'+d.replace(/[^a-zA-Z0-9]/g,'');
+
       h+=`<tr${sep?' style="border-top:2px solid var(--border2)"':''}>
+        <td><button class="h2h-toggle-btn" onclick="toggleH2HRow('${rowId}',this)" style="border:1.5px solid var(--border2);background:var(--bg2);border-radius:6px;width:22px;height:22px;font-size:10px;cursor:pointer;color:var(--text2)">▸</button></td>
         <td style="font-weight:600">${pbLabel(d,h2hGen)}</td>
-        <td style="font-family:var(--mono)">${valA}</td>
-        <td style="font-family:var(--mono);color:var(--text3)">${pA!=null?pA:'—'}</td>
-        <td style="font-family:var(--mono)">${valB}</td>
-        <td style="font-family:var(--mono);color:var(--text3)">${pB!=null?pB:'—'}</td>
-        <td>${edge}</td>
+        <td style="font-family:var(--mono)">${pbValA}</td>
+        <td style="font-family:var(--mono)">${pbValB}</td>
+        <td style="font-size:11px">${
+          pA!=null&&pB!=null&&pA!==pB
+            ? `<span style="color:${pA>pB?'var(--royal)':'var(--purple)'};font-weight:700">${pA>pB?nameA:nameB} (+${Math.abs(pA-pB)})</span>`
+            : (pA!=null&&pB!=null?`<span style="color:var(--text3)">=</span>`:`<span style="color:var(--text3)">—</span>`)
+        }</td>
+      </tr>`;
+
+      // ── Pannello dettaglio: maglia/pantaloncini/scarpe/atleta/allenatore/centro ──
+      const discKey = (DISC_TO_GEAR_COL[d]||'').replace('gear_','');
+      const grpKey = GRP[d].toLowerCase();
+      const jerseyA = invA[`jersey_${genderKey}_${discKey}_value`], jerseyB = invB[`jersey_${genderKey}_${discKey}_value`];
+      const shortsA = invA[`shorts_${genderKey}_${discKey}_value`], shortsB = invB[`shorts_${genderKey}_${discKey}_value`];
+      const shoesA  = invA[`shoes_${genderKey}_${discKey}_value`],  shoesB  = invB[`shoes_${genderKey}_${discKey}_value`];
+      const athleteA = invA[`athlete_${genderKey}_${grpKey}_value`], athleteB = invB[`athlete_${genderKey}_${grpKey}_value`];
+      const coachA = invA[`coach_${grpKey}_value`], coachB = invB[`coach_${grpKey}_value`];
+      const centerA = invA[`center_${genderKey}_${discKey}_value`], centerB = invB[`center_${genderKey}_${discKey}_value`];
+
+      h+=`<tr id="${rowId}" class="h2h-detail-row" style="display:none;background:var(--bg)">
+        <td colspan="5" style="padding:4px 4px 10px 30px">
+          <table style="width:100%">
+            <tbody>
+              ${compRow('👕',L('Maglia','Jersey','Maillot'),jerseyA,jerseyB)}
+              ${compRow('🩳',L('Pantaloncini','Shorts','Short'),shortsA,shortsB)}
+              ${compRow('👟',L('Scarpe','Shoes','Chaussures'),shoesA,shoesB)}
+              ${compRow('🔥',L('Atleta (gruppo)','Athlete (group)','Athlète (groupe)'),athleteA,athleteB)}
+              ${compRow('💧',L('Allenatore (gruppo)','Coach (group)','Entraîneur (groupe)'),coachA,coachB)}
+              ${compRow('🏟',L('Centro allenamento','Training centre','Centre d\'entraînement'),centerA,centerB)}
+            </tbody>
+          </table>
+        </td>
       </tr>`;
     });
     h+=`</tbody></table></div>
     <p style="font-size:11px;color:var(--text3);margin-top:10px">
-      ${L('Percentile calcolato sui PB pubblicati di tutto il club per quella disciplina/genere. "—" = nessun PB inserito.','Percentile computed on the whole club\'s published PBs for that event/gender. "—" = no PB entered.','Percentile calculé sur les records publiés de tout le club pour cette épreuve/ce genre. "—" = aucun record renseigné.')}
+      ${L('Percentile PB calcolato sui record pubblicati di tutto il club per quella disciplina/genere. Il dettaglio (▸) mostra i valori attuali dall\'Inventario: atleta e allenatore sono per gruppo di discipline (stesso valore su tutte le discipline del gruppo), gli altri per singola disciplina. "—" = dato non disponibile.','PB percentile computed on the whole club\'s published records for that event/gender. The detail (▸) shows current Inventory values: athlete and coach are per event group (same value across all events in that group), the others are per single event. "—" = data not available.','Percentile de record calculé sur les records publiés de tout le club pour cette épreuve/ce genre. Le détail (▸) affiche les valeurs actuelles de l\'Inventaire : athlète et entraîneur sont par groupe d\'épreuves (même valeur pour toutes les épreuves du groupe), les autres par épreuve individuelle. "—" = donnée non disponible.')}
     </p>`;
   }
   h+=`</div>`;
